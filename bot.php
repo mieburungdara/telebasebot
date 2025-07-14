@@ -27,10 +27,22 @@ function processMessage($message)
     $username = $message['from']['username'] ?? '';
     $text = $message['text'] ?? '';
 
-    // Check if user exists, if not, create new user
+    // Check if user exists
     $user = findUserByTelegramId($user_id);
     if (!$user) {
-        $user = createUser($user_id, $username);
+        // If user not found, check if they are banned before creating a new one
+        $raw_user = findRawUserByTelegramId($user_id);
+        if ($raw_user && $raw_user['is_banned']) {
+            // User is banned, so we do nothing.
+            return;
+        }
+        // If not banned and not found, create a new user
+        if (!$raw_user) {
+            $user = createUser($user_id, $username);
+        } else {
+            // This case should technically not be reached if findUserByTelegramId is working correctly
+            $user = $raw_user;
+        }
     }
 
     // Handle commands

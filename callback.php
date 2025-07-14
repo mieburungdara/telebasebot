@@ -94,6 +94,19 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
             logAction($admin_user['id'], 'admin_extend', $db_message_id, "Added $minutes_to_add minutes");
             // The caption will be updated by the cronjob automatically
             break;
+
+        case 'admin_block':
+            if (blockUser($original_user['id'])) {
+                // Also cancel the post
+                updateMessageStatus($db_message_id, 'cancelled');
+                editMessageText(EDITOR_CHANNEL_ID, $editor_message_id, "Kiriman ini telah dibatalkan dan pengguna @" . ($original_user['username'] ?? $original_user['id']) . " telah diblokir oleh @" . $admin_user['username']);
+                sendMessage($original_user['telegram_id'], 'Anda telah diblokir untuk mengirimkan konten.');
+                answerCallbackQuery($callback_id, "Pengguna telah diblokir dan kiriman dibatalkan.");
+                logAction($admin_user['id'], 'admin_block', $db_message_id);
+            } else {
+                answerCallbackQuery($callback_id, "Gagal memblokir pengguna.", true);
+            }
+            break;
     }
 }
 
@@ -128,6 +141,9 @@ function handleUpload($callback_id, $user, $db_message_id, $chat_id, $message_id
                 ['text' => '⏱+2m', 'callback_data' => 'admin_extend:2:' . $db_message_id],
                 ['text' => '⏱+5m', 'callback_data' => 'admin_extend:5:' . $db_message_id],
                 ['text' => '⏱+10m', 'callback_data' => 'admin_extend:10:' . $db_message_id],
+            ],
+            [
+                ['text' => '🚫 Block User', 'callback_data' => 'admin_block:' . $db_message_id],
             ]
         ]
     ];

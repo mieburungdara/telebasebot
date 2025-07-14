@@ -16,13 +16,22 @@ function getDbConnection()
     return $conn;
 }
 
-function findUserByTelegramId($telegram_id)
+function findRawUserByTelegramId($telegram_id)
 {
     $db = getDbConnection();
     $stmt = $db->prepare("SELECT * FROM users WHERE telegram_id = ?");
     $stmt->bind_param('i', $telegram_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc();
+}
+
+function findUserByTelegramId($telegram_id)
+{
+    $user = findRawUserByTelegramId($telegram_id);
+    if ($user && $user['is_banned']) {
+        return null; // Treat banned users as not found
+    }
+    return $user;
 }
 
 function findUserById($id)
@@ -84,6 +93,24 @@ function addPointsToUser($user_id, $points_to_add)
     $stmt = $db->prepare("UPDATE users SET points = points + ? WHERE id = ?");
     $stmt->bind_param('ii', $points_to_add, $user_id);
     return $stmt->execute();
+}
+
+function blockUser($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE users SET is_banned = 1 WHERE id = ?");
+    $stmt->bind_param('i', $user_id);
+    return $stmt->execute();
+}
+
+function isUserBanned($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT is_banned FROM users WHERE id = ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result()->fetch_assoc();
+    return $result && $result['is_banned'];
 }
 
 function getTopContributors($limit = 10)

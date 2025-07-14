@@ -4,6 +4,7 @@ CREATE TABLE `users` (
   `username` varchar(255) DEFAULT NULL,
   `role` enum('member','editor','admin','superadmin') NOT NULL DEFAULT 'member',
   `points` int(11) NOT NULL DEFAULT 0,
+  `is_banned` tinyint(1) NOT NULL DEFAULT '0',
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `telegram_id` (`telegram_id`)
