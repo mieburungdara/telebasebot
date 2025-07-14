@@ -95,12 +95,18 @@ function addPointsToUser($user_id, $points_to_add)
     return $stmt->execute();
 }
 
-function blockUser($user_id)
+function blockUser($user)
 {
     $db = getDbConnection();
     $stmt = $db->prepare("UPDATE users SET is_banned = 1 WHERE id = ?");
-    $stmt->bind_param('i', $user_id);
-    return $stmt->execute();
+    $stmt->bind_param('i', $user['id']);
+    $success = $stmt->execute();
+
+    if ($success) {
+        sendMessage($user['telegram_id'], BANNED_MESSAGE);
+    }
+
+    return $success;
 }
 
 function isUserBanned($user_id)

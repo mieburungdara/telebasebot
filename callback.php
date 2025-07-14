@@ -96,11 +96,10 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
             break;
 
         case 'admin_block':
-            if (blockUser($original_user['id'])) {
+            if (blockUser($original_user)) {
                 // Also cancel the post
                 updateMessageStatus($db_message_id, 'cancelled');
                 editMessageText(EDITOR_CHANNEL_ID, $editor_message_id, "Kiriman ini telah dibatalkan dan pengguna @" . ($original_user['username'] ?? $original_user['id']) . " telah diblokir oleh @" . $admin_user['username']);
-                sendMessage($original_user['telegram_id'], 'Anda telah diblokir untuk mengirimkan konten.');
                 answerCallbackQuery($callback_id, "Pengguna telah diblokir dan kiriman dibatalkan.");
                 logAction($admin_user['id'], 'admin_block', $db_message_id);
             } else {
