@@ -67,7 +67,7 @@ function handleCommand($chat_id, $command, $user)
     // Simple command routing
     switch (true) {
         case $command === '/start':
-            $responseText = "Selamat datang! Kirimkan saya media (foto, video, atau dokumen) untuk diproses.";
+            $responseText = "Selamat datang! Kirimkan saya media (foto, video, atau dokumen) untuk diproses. Tekan /rules untuk melihat peraturan.";
             break;
         case $command === '/topkontributor':
             $top_users = getTopContributors();
@@ -88,6 +88,9 @@ function handleCommand($chat_id, $command, $user)
             $responseText .= "✅ Diterbitkan: *" . $stats['published_posts'] . "*\n";
             $responseText .= "⏳ Menunggu Review: *" . $stats['review_posts'] . "*\n";
             $responseText .= "📝 Menunggu Konfirmasi: *" . $stats['pending_posts'] . "*\n";
+            break;
+        case $command === '/rules':
+            $responseText = "Ini adalah peraturan bot:\n\n1. Dilarang mengirim konten SARA.\n2. Dilarang mengirim konten pornografi.\n3. Dilarang mengirim konten yang melanggar hak cipta.";
             break;
         default:
             $responseText = "Perintah tidak dikenali.";
