@@ -19,4 +19,7 @@ define('PENDING_DELETE_MINUTES', 5);
 // Auto-publish after how many minutes without admin action
 define('AUTOPUBLISH_MINUTES', 10);
 
+// --- MESSAGES ---
+define('BANNED_MESSAGE', "Anda telah diblokir karena melanggar peraturan.\n\nSaran Peraturan:\n1. Dilarang mengirim konten SARA.\n2. Dilarang mengirim konten pornografi.\n3. Dilarang mengirim konten yang mengandung kekerasan.\n4. Dilarang mengirim spam.");
+
 ?>
