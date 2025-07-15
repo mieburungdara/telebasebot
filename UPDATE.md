@@ -16,18 +16,9 @@ Tentu, Reza! Berikut tambahan **perintah & ide lanjutan untuk pengguna**, difoku
 ```
 🔥 Kiriman kamu termasuk paling banyak dilihat minggu ini!
 Keren banget! 😎
+Lihat kiriman
 ```
 
----
-
-## 🧩 FITUR KHUSUS OPSIONAL
-
-| Perintah            | Fungsi                                                                   |
-| ------------------- | ------------------------------------------------------------------------ |
-| `/langganan #tag`   | User akan dapat notif kalau ada konten baru dengan tag tsb               |
-| `/berhenti #tag`    | Untuk opt-out dari notifikasi tertentu                                   |
-
----
 
 ## 👑 KEUNTUNGAN FITUR-FITUR INI
 
