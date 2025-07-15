@@ -21,6 +21,7 @@ CREATE TABLE `messages` (
   `auto_publish_at` timestamp NULL DEFAULT NULL,
   `editor_message_id` bigint(20) DEFAULT NULL,
   `public_message_id` bigint(20) DEFAULT NULL,
+  `reminder_sent` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),

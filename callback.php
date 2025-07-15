@@ -40,6 +40,67 @@ function processCallbackQuery($callback_query)
         case 'cancel':
             handleCancel($callback_id, $user, $db_message_id, $chat_id, $message_id);
             break;
+        case 'stat':
+            // Handle the '/statistik' command logic here
+            $stats = getUserStats($user['id']);
+            $responseText = "📊 Statistik Kontribusi Kamu\n\n";
+            $responseText .= "✨ Total Poin: " . $user['points'] . "  \n";
+            $responseText .= "📝 Total Kiriman: " . $stats['total_posts'] . "  \n";
+            $responseText .= "✅ Diterbitkan: " . $stats['published_posts'] . "  \n";
+            $responseText .= "❌ Dibatalkan: " . $stats['cancelled_posts'] . "  \n";
+            $responseText .= "⏳ Menunggu Editor: " . $stats['review_posts'] . "\n";
+            editMessageText($chat_id, $message_id, $responseText);
+            answerCallbackQuery($callback_id);
+            break;
+        case 'history':
+            // Handle the '/histori' command logic here
+            $history = getPostHistory($user['id'], 5);
+            if (empty($history)) {
+                $responseText = "🗂️ Riwayat Kiriman Kamu:\n\nBelum ada kiriman.";
+            } else {
+                $responseText = "🗂️ Riwayat Kiriman Kamu:\n\n";
+                foreach ($history as $index => $item) {
+                    $status_text = '';
+                    switch ($item['status']) {
+                        case 'forwarded':
+                            $status_text = 'Diterbitkan';
+                            break;
+                        case 'cancelled':
+                        case 'deleted':
+                            $status_text = 'Dibatalkan';
+                            break;
+                        case 'ready_review':
+                            $status_text = 'Menunggu Editor';
+                            break;
+                        default:
+                            $status_text = ucfirst($item['status']);
+                    }
+                    $responseText .= ($index + 1) . ". " . ucfirst($item['type']) . " – " . $status_text . "\n";
+                }
+            }
+            editMessageText($chat_id, $message_id, $responseText);
+            answerCallbackQuery($callback_id);
+            break;
+        case 'top':
+            // Handle the '/topkontributor' command logic here
+            $top_users = getTopContributors();
+            if (empty($top_users)) {
+                $responseText = "Belum ada kontributor.";
+            } else {
+                $responseText = "🏆 Top 10 Kontributor:\n\n";
+                foreach ($top_users as $index => $top_user) {
+                    $responseText .= ($index + 1) . ". " . ($top_user['username'] ? '@' . $top_user['username'] : '👤 (tanpa username)') . " – " . $top_user['points'] . " poin\n";
+                }
+            }
+            editMessageText($chat_id, $message_id, $responseText);
+            answerCallbackQuery($callback_id);
+            break;
+        case 'help':
+            // Handle the '/bantuan' command logic here
+            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /menu → Tampilkan menu interaktif\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik\n- /faq → Pertanyaan yang sering diajukan";
+            editMessageText($chat_id, $message_id, $responseText);
+            answerCallbackQuery($callback_id);
+            break;
     }
 }
 
