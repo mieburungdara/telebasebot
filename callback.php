@@ -67,11 +67,14 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
                 // 3. Remove keyboard from editor channel
                 editMessageReplyMarkup(EDITOR_CHANNEL_ID, $editor_message_id, null);
                 // 4. Notify user
-                $keyboard = [['inline_keyboard' => [[['text' => 'Lihat Postingan', 'url' => 'https://t.me/' . 'your_public_channel_username' . '/' . $public_message_id]]]]];
-                sendMessage($original_user['telegram_id'], '🎉 Selamat! Kiriman Anda telah disetujui dan dipublikasikan oleh editor.', $keyboard);
+                $keyboard = ['inline_keyboard' => [[['text' => 'Lihat Posting', 'url' => 'https://t.me/' . PUBLIC_CHANNEL_USERNAME . '/' . $public_message_id]]]];
+                $text = "✅ Media kamu telah diterbitkan ke channel!\n\n📎 Klik tombol di bawah untuk melihat postingan:";
+                sendMessage($original_user['telegram_id'], $text, $keyboard);
                 answerCallbackQuery($callback_id, "Dipublikasikan!");
                 logAction($admin_user['id'], 'admin_publish', $db_message_id);
             } else {
+                // Notify user about the failure
+                sendMessage($original_user['telegram_id'], '⚠️ Gagal menerbitkan media kamu karena kesalahan teknis. Silakan coba lagi nanti.');
                 answerCallbackQuery($callback_id, "Gagal mempublikasikan.", true);
             }
             break;
@@ -79,7 +82,7 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
         case 'admin_cancel':
             updateMessageStatus($db_message_id, 'cancelled');
             editMessageText(EDITOR_CHANNEL_ID, $editor_message_id, "Kiriman ini telah dibatalkan oleh @" . $admin_user['username']);
-            sendMessage($original_user['telegram_id'], 'Maaf, kiriman Anda tidak disetujui oleh editor kami saat ini.');
+            sendMessage($original_user['telegram_id'], '❌ Mohon maaf, kiriman kamu tidak kami terbitkan kali ini.\n\nTetap semangat dan kirim konten menarik lainnya ya! 😊');
             answerCallbackQuery($callback_id, "Kiriman dibatalkan.");
             logAction($admin_user['id'], 'admin_cancel', $db_message_id);
             break;

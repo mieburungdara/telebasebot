@@ -67,30 +67,60 @@ function handleCommand($chat_id, $command, $user)
     // Simple command routing
     switch (true) {
         case $command === '/start':
-            $responseText = "Selamat datang! Kirimkan saya media (foto, video, atau dokumen) untuk diproses. Tekan /rules untuk melihat peraturan.";
+            $responseText = "👋 Hai, selamat datang di bot kiriman media!\nKamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.\n\n📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.\n⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.\n\nKetik /bantuan untuk info lebih lanjut.";
+            break;
+        case $command === '/bantuan':
+            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik";
             break;
         case $command === '/topkontributor':
             $top_users = getTopContributors();
             if (empty($top_users)) {
                 $responseText = "Belum ada kontributor.";
             } else {
-                $responseText = "🏆 *Top 10 Kontributor Teratas:*\n\n";
+                $responseText = "🏆 Top 10 Kontributor:\n\n";
                 foreach ($top_users as $index => $top_user) {
-                    $responseText .= ($index + 1) . ". " . ($top_user['username'] ? '@' . $top_user['username'] : 'User') . " - " . $top_user['points'] . " poin\n";
+                    $responseText .= ($index + 1) . ". " . ($top_user['username'] ? '@' . $top_user['username'] : '👤 (tanpa username)') . " – " . $top_user['points'] . " poin\n";
                 }
             }
             break;
         case $command === '/statistik':
             $stats = getUserStats($user['id']);
-            $responseText = "📊 *Statistik Anda:*\n\n";
-            $responseText .= "🏅 Poin: *" . $user['points'] . "*\n";
-            $responseText .= "📤 Total Kiriman: *" . $stats['total_posts'] . "*\n";
-            $responseText .= "✅ Diterbitkan: *" . $stats['published_posts'] . "*\n";
-            $responseText .= "⏳ Menunggu Review: *" . $stats['review_posts'] . "*\n";
-            $responseText .= "📝 Menunggu Konfirmasi: *" . $stats['pending_posts'] . "*\n";
+            $responseText = "📊 Statistik Kontribusi Kamu\n\n";
+            $responseText .= "✨ Total Poin: " . $user['points'] . "  \n";
+            $responseText .= "📝 Total Kiriman: " . $stats['total_posts'] . "  \n";
+            $responseText .= "✅ Diterbitkan: " . $stats['published_posts'] . "  \n";
+            $responseText .= "❌ Dibatalkan: " . $stats['cancelled_posts'] . "  \n"; // Assuming you add this stat
+            $responseText .= "⏳ Menunggu Editor: " . $stats['review_posts'] . "\n";
             break;
-        case $command === '/rules':
-            $responseText = "Ini adalah peraturan bot:\n\n1. Dilarang mengirim konten SARA.\n2. Dilarang mengirim konten pornografi.\n3. Dilarang mengirim konten yang melanggar hak cipta.";
+        case $command === '/poin':
+            $responseText = "✨ Poin kamu saat ini: " . $user['points'];
+            break;
+        case $command === '/histori':
+            // Assuming you implement getPostHistory function
+            $history = getPostHistory($user['id'], 5);
+            if (empty($history)) {
+                $responseText = "🗂️ Riwayat Kiriman Kamu:\n\nBelum ada kiriman.";
+            } else {
+                $responseText = "🗂️ Riwayat Kiriman Kamu:\n\n";
+                foreach ($history as $index => $item) {
+                    $status_text = '';
+                    switch ($item['status']) {
+                        case 'forwarded':
+                            $status_text = 'Diterbitkan';
+                            break;
+                        case 'cancelled':
+                        case 'deleted':
+                            $status_text = 'Dibatalkan';
+                            break;
+                        case 'ready_review':
+                            $status_text = 'Menunggu Editor';
+                            break;
+                        default:
+                            $status_text = ucfirst($item['status']);
+                    }
+                    $responseText .= ($index + 1) . ". " . ucfirst($item['type']) . " – " . $status_text . "\n";
+                }
+            }
             break;
         default:
             $responseText = "Perintah tidak dikenali.";
@@ -118,7 +148,7 @@ function handleMedia($message, $user, $media_type)
                 ]
             ]
         ];
-        $text = "Media Anda telah diterima dan sedang menunggu konfirmasi. Silakan klik 'Upload' untuk melanjutkan atau 'Hapus' untuk membatalkan.\n\n*Pesan ini akan otomatis dihapus dalam " . PENDING_DELETE_MINUTES . " menit jika tidak ada tindakan.*";
+        $text = "📩 Media kamu telah kami terima!\n\nKlik tombol di bawah ini:\n✅ Upload → Untuk melanjutkan ke admin\n❌ Hapus → Untuk membatalkan\n⏳ Jika tidak dikonfirmasi dalam 5 menit, akan dihapus otomatis.";
         sendMessage($user['telegram_id'], $text, $keyboard);
     } else {
         sendMessage($user['telegram_id'], 'Terjadi kesalahan saat menyimpan media Anda. Silakan coba lagi.');
