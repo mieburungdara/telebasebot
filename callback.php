@@ -101,6 +101,16 @@ function processCallbackQuery($callback_query)
             editMessageText($chat_id, $message_id, $responseText);
             answerCallbackQuery($callback_id);
             break;
+        case 'rate':
+            $rating = (int)$parts[1];
+            $content_id = (int)$parts[2];
+            if (saveRating($user['id'], $content_id, $rating)) {
+                answerCallbackQuery($callback_id, "Terima kasih atas penilaian Anda!");
+                editMessageText($chat_id, $message_id, "Anda telah memberikan rating: " . str_repeat('⭐', $rating));
+            } else {
+                answerCallbackQuery($callback_id, "Terjadi kesalahan saat menyimpan penilaian Anda.", true);
+            }
+            break;
     }
 }
 
@@ -172,6 +182,39 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
                 logAction($admin_user['id'], 'admin_block', $db_message_id);
             } else {
                 answerCallbackQuery($callback_id, "Gagal memblokir pengguna.", true);
+            }
+            break;
+        case 'admin_approve_content':
+            $content_id = $data_parts[1];
+            if (updatePaidContentStatus($content_id, 'active')) {
+                $content = getPaidContentById($content_id);
+                $creator = findUserById($content['user_id']);
+                sendMessage($creator['telegram_id'], "Selamat! Konten Anda dengan ID #" . $content_id . " telah disetujui dan sekarang aktif di katalog.");
+                answerCallbackQuery($callback_id, "Konten disetujui.");
+                editMessageText($chat_id, $message_id, "Konten #" . $content_id . " telah disetujui oleh @" . $admin_user['username']);
+            } else {
+                answerCallbackQuery($callback_id, "Gagal menyetujui konten.", true);
+            }
+            break;
+        case 'admin_reject_content':
+            $content_id = $data_parts[1];
+            if (updatePaidContentStatus($content_id, 'rejected')) {
+                $content = getPaidContentById($content_id);
+                $creator = findUserById($content['user_id']);
+                sendMessage($creator['telegram_id'], "Maaf, konten Anda dengan ID #" . $content_id . " ditolak. Silakan periksa kembali pedoman komunitas.");
+                answerCallbackQuery($callback_id, "Konten ditolak.");
+                editMessageText($chat_id, $message_id, "Konten #" . $content_id . " telah ditolak oleh @" . $admin_user['username']);
+            } else {
+                answerCallbackQuery($callback_id, "Gagal menolak konten.", true);
+            }
+            break;
+        case 'admin_block_creator':
+            $creator_id = $data_parts[1];
+            $creator = findUserById($creator_id);
+            if (blockUser($creator)) {
+                answerCallbackQuery($callback_id, "Kreator telah diblokir.");
+            } else {
+                answerCallbackQuery($callback_id, "Gagal memblokir kreator.", true);
             }
             break;
     }

@@ -1,59 +1,41 @@
-# Telegram Moderation Bot (PHP)
+# Telegram Bot Monetisasi Konten
 
-Bot Telegram ini berfungsi sebagai perantara untuk memoderasi konten (gambar, video, dokumen) yang dikirim oleh pengguna sebelum dipublikasikan ke channel publik. Bot ini dibuat menggunakan PHP dan MySQL/MariaDB.
-
-## Alur Kerja Bot
-
-1.  **Pengguna Mengirim Media**: Pengguna mengirimkan foto, video, atau dokumen ke bot.
-2.  **Konfirmasi Pengguna**: Bot akan membalas dengan pesan yang meminta konfirmasi. Pesan ini berisi tombol "✅ Upload" dan "❌ Hapus".
-3.  **Batas Waktu Konfirmasi**: Jika pengguna tidak merespons dalam 5 menit, kiriman akan otomatis dibatalkan.
-4.  **Proses Moderasi**: Setelah pengguna menekan "✅ Upload", media akan dikirim ke *Channel Editor*. Di channel ini, admin/editor dapat melihat kiriman tersebut.
-5.  **Tindakan Editor**: Di Channel Editor, terdapat tombol untuk:
-    *   `✅ Publish`: Langsung mempublikasikan kiriman ke *Channel Publik*.
-    *   `❌ Batal`: Membatalkan kiriman.
-    *   `⏱ Perpanjang`: Menambah waktu auto-publish.
-6.  **Auto-Publish**: Jika tidak ada tindakan dari editor dalam 10 menit, bot akan secara otomatis mempublikasikan kiriman ke *Channel Publik*.
-7.  **Notifikasi & Poin**: Setelah kiriman dipublikasikan (baik manual oleh editor atau otomatis), pengguna akan menerima notifikasi dan mendapatkan poin.
+Bot Telegram ini memungkinkan pengguna untuk mengirimkan media, dan bagi kreator untuk menjual konten berbayar kepada pengguna lain. Bot ini mencakup sistem moderasi, pembayaran, dan analitik yang komprehensif.
 
 ## Fitur
 
--   **Penerimaan Media**: Menerima foto, video, dan dokumen.
--   **Moderasi Konten**: Alur moderasi melalui channel editor.
--   **Auto-Publish**: Publikasi otomatis jika tidak ada tindakan dari editor.
--   **Cronjobs**:
-    -   Menghapus kiriman yang tertunda secara otomatis.
-    -   Memperbarui countdown waktu auto-publish di channel editor.
-    -   Mengeksekusi auto-publish.
--   **Sistem Poin**: Pengguna mendapatkan poin untuk setiap kiriman yang berhasil dipublikasikan.
--   **Peran Pengguna**: Sistem membedakan antara `member`, `editor`, dan `admin`.
--   **Perintah Pengguna**:
-    -   `/start`: Memulai interaksi dengan bot.
-    -   `/statistik`: Melihat statistik pribadi (jumlah poin, total kiriman, status kiriman).
-    -   `/topkontributor`: Melihat 10 pengguna dengan poin tertinggi.
+### Untuk Pengguna
+- **/start**: Memulai interaksi dengan bot.
+- **/bantuan**: Menampilkan pesan bantuan dengan daftar perintah.
+- **/katalog**: Menelusuri konten berbayar yang tersedia untuk dibeli.
+- **/belikonten <id_konten>**: Membeli konten.
+- **/riwayatbeli**: Melihat riwayat semua konten yang telah Anda beli.
+- **/saldo**: Memeriksa saldo Anda saat ini.
+- **/tarik <jumlah>**: Meminta penarikan dana.
 
-## Struktur File
+### Untuk Kreator
+- **/buatkonten**: Memulai proses pembuatan konten berbayar baru.
+- **/kontenku**: Melihat daftar konten berbayar yang telah Anda buat.
+- **/penghasilan**: Melihat statistik penghasilan Anda.
+- **/analitik <id_konten>**: Melihat analitik terperinci untuk konten tertentu, termasuk penayangan, pembelian, dan tingkat konversi.
+- **/topkreator**: Melihat 10 kreator teratas berdasarkan penghasilan.
+- **Gambar Blur**: Gambar yang diunggah secara otomatis dibuat versi buramnya untuk pratinjau di katalog.
 
-```
-.
-├── README.md
-├── bot.php                 # File utama (webhook handler)
-├── callback.php            # Menangani semua callback dari inline keyboard
-├── config
-│   └── config.php          # File konfigurasi (token, DB, channel ID)
-├── cronjobs
-│   ├── auto_publish.php
-│   ├── check_pending_delete.php
-│   └── update_caption_countdown.php
-├── database.sql            # Skema database
-└── includes
-    └── functions.php       # Kumpulan fungsi helper
-```
+### Untuk Admin/Moderator
+- **/moderasi**: Melihat konten yang tertunda untuk disetujui atau ditolak.
+- **Persetujuan Konten**: Menyetujui atau menolak konten yang dikirimkan oleh kreator.
+- **Blokir Kreator**: Memblokir kreator agar tidak dapat mengirimkan atau menjual konten.
+
+## Fitur Tambahan
+- **Saldo Refund Otomatis**: Jika pengiriman konten gagal setelah pembelian, saldo pengguna akan dikembalikan secara otomatis.
+- **Rating & Ulasan**: Setelah membeli konten, pengguna dapat memberikan rating.
+- **Papan Peringkat**: Papan peringkat untuk kontributor dan kreator teratas.
 
 ## Instalasi
 
 1.  **Database**:
     *   Buat database baru di MySQL/MariaDB.
-    *   Impor `database.sql` untuk membuat tabel yang diperlukan (`users`, `messages`, `logs`).
+    *   Impor `database.sql` untuk membuat tabel yang diperlukan.
 
 2.  **Konfigurasi**:
     *   Salin `config/config.php.example` menjadi `config/config.php`.
@@ -62,7 +44,7 @@ Bot Telegram ini berfungsi sebagai perantara untuk memoderasi konten (gambar, vi
         *   `BOT_TOKEN`: Token bot Anda yang didapat dari @BotFather.
         *   `EDITOR_CHANNEL_ID`: ID Channel Editor (channel privat).
         *   `PUBLIC_CHANNEL_ID`: ID Channel Publik.
-        *   `'your_public_channel_username'`: ganti dengan username channel publik Anda di `auto_publish.php` dan `callback.php` untuk URL "Lihat Postingan".
+        *   `'your_public_channel_username'`: ganti dengan username channel publik Anda.
 
 3.  **Webhook**:
     *   Upload semua file ke server web Anda.
@@ -78,6 +60,7 @@ Bot Telegram ini berfungsi sebagai perantara untuk memoderasi konten (gambar, vi
         * * * * * php /path/to/your/project/cronjobs/check_pending_delete.php
         * * * * * php /path/to/your/project/cronjobs/update_caption_countdown.php
         * * * * * php /path/to/your/project/cronjobs/auto_publish.php
+        * * * * * php /path/to/your/project/cronjobs/refund_errors.php
         ```
 
 ## Cara Kerja Admin/Editor
