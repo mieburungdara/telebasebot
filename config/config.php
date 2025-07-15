@@ -12,6 +12,7 @@ define('BOT_TOKEN', 'YOUR_BOT_TOKEN');
 // --- CHANNEL CONFIGURATION ---
 define('EDITOR_CHANNEL_ID', 'YOUR_EDITOR_CHANNEL_ID');
 define('PUBLIC_CHANNEL_ID', 'YOUR_PUBLIC_CHANNEL_ID');
+define('PUBLIC_CHANNEL_USERNAME', 'your_public_channel_username'); // Add this line
 
 // --- OTHER SETTINGS ---
 // Auto-delete pending messages after how many minutes

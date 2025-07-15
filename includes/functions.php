@@ -143,11 +143,21 @@ function getUserStats($user_id)
             (SELECT COUNT(*) FROM messages WHERE user_id = ?) as total_posts,
             (SELECT COUNT(*) FROM messages WHERE user_id = ? AND status = 'forwarded') as published_posts,
             (SELECT COUNT(*) FROM messages WHERE user_id = ? AND status = 'pending') as pending_posts,
-            (SELECT COUNT(*) FROM messages WHERE user_id = ? AND status = 'ready_review') as review_posts
+            (SELECT COUNT(*) FROM messages WHERE user_id = ? AND status = 'ready_review') as review_posts,
+            (SELECT COUNT(*) FROM messages WHERE user_id = ? AND (status = 'cancelled' OR status = 'deleted')) as cancelled_posts
     ");
-    $stmt->bind_param('iiii', $user_id, $user_id, $user_id, $user_id);
+    $stmt->bind_param('iiiii', $user_id, $user_id, $user_id, $user_id, $user_id);
     $stmt->execute();
     return $stmt->get_result()->fetch_assoc();
+}
+
+function getPostHistory($user_id, $limit = 5)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT type, status FROM messages WHERE user_id = ? ORDER BY created_at DESC LIMIT ?");
+    $stmt->bind_param('ii', $user_id, $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 }
 
 function logAction($user_id, $action, $message_id = null, $details = null)
