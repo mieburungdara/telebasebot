@@ -1,74 +1,37 @@
-Tentu Reza, berikut lanjutan **perintah dan pesan yang bisa kamu kirimkan ke pengguna**, termasuk ide baru dan interaksi yang lebih engaging:
+Tentu, Reza! Berikut tambahan **perintah & ide lanjutan untuk pengguna**, difokuskan pada peningkatan engagement:
 
 ---
 
-## 🆕 LANJUTAN PERINTAH UNTUK PENGGUNA
+### 20. `/komunitas`
 
-### 7. `/menu` *(dengan tombol navigasi)*
+> 🔹 Menjelaskan aturan komunitas/pedoman kontribusi
+> 🔹 Tampilkan juga channel atau grup Telegram pendukung (misal grup diskusi editor)
 
-> 🔹 Tujuan: Akses cepat ke semua fitur via tombol inline
-> 🔹 Contoh output:
+---
 
-```
-📋 Menu Utama
+## 📩 NOTIFIKASI AUTO (USER-ORIENTED)
 
-Pilih fitur yang ingin kamu akses:
-🔘 Statistik  
-🔘 Kiriman Saya  
-🔘 Top Kontributor  
-🔘 Bantuan
-```
-
-Dengan `inline_keyboard`:
-
-```json
-[
-  [{"text": "📊 Statistik", "callback_data": "stat:me"}],
-  [{"text": "📁 Kiriman Saya", "callback_data": "history"}],
-  [{"text": "🏆 Top Kontributor", "callback_data": "top"}],
-  [{"text": "📖 Bantuan", "callback_data": "help"}]
-]
-```
-
-### 11. `/faq` atau `/aturan`
-
-> 🔹 Berisi FAQ (Pertanyaan Umum) dan aturan pengiriman konten
-
-Contoh:
+### I. Jika kiriman masuk trending/top 3
 
 ```
-📌 FAQ
-
-Q: Berapa maksimal ukuran video?
-A: Maks 50MB.
-
-Q: Berapa lama konten saya diproses?
-A: Maksimal 10 menit atau akan dipublish otomatis.
-
-Q: Bolehkah saya kirim konten promosi?
-A: Ya, selama sesuai pedoman komunitas.
+🔥 Kiriman kamu termasuk paling banyak dilihat minggu ini!
+Keren banget! 😎
 ```
 
 ---
 
-## 🔔 PESAN OTOMATIS (TRIGGERED)
+## 🧩 FITUR KHUSUS OPSIONAL
 
-### E. Reminder konfirmasi
+| Perintah            | Fungsi                                                                   |
+| ------------------- | ------------------------------------------------------------------------ |
+| `/langganan #tag`   | User akan dapat notif kalau ada konten baru dengan tag tsb               |
+| `/berhenti #tag`    | Untuk opt-out dari notifikasi tertentu                                   |
 
-> Jika user sudah kirim media tapi belum klik tombol ✅/❌
-
-```
-⏳ Hai, kiriman kamu belum dikonfirmasi.
-Klik ✅ untuk melanjutkan, atau ❌ untuk membatalkan.
-Akan dihapus otomatis dalam 2 menit.
-```
 ---
 
-## 📌 CATATAN
+## 👑 KEUNTUNGAN FITUR-FITUR INI
 
-* Kamu bisa simpan semua perintah & penjelasan ke dalam:
-
-  * 🗂️ `/help`, atau
-  * 📋 `/menu` interaktif
+* Meningkatkan **engagement user**
+* Membentuk komunitas yg **aktif & terkontrol**
 
 ---
