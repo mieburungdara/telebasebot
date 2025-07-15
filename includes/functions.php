@@ -432,4 +432,84 @@ function purchaseContent($user_id, $content)
     }
 }
 
+// --- PENGHASILAN FUNCTIONS ---
+
+function getTotalPaidContentsByUser($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT COUNT(*) as total FROM paid_contents WHERE user_id = ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+}
+
+function getTotalEarningsByUser($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT SUM(p.price) as total
+        FROM purchases p
+        JOIN paid_contents c ON p.content_id = c.id
+        WHERE c.user_id = ?
+    ");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+}
+
+function getUniqueBuyersCountByUser($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT COUNT(DISTINCT p.user_id) as total
+        FROM purchases p
+        JOIN paid_contents c ON p.content_id = c.id
+        WHERE c.user_id = ?
+    ");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+}
+
+function getTopSellingContentsByUser($user_id, $limit = 2)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT c.id, c.type, COUNT(p.id) AS jumlah_beli, SUM(p.price) AS total
+        FROM purchases p
+        JOIN paid_contents c ON p.content_id = c.id
+        WHERE c.user_id = ?
+        GROUP BY c.id, c.type
+        ORDER BY jumlah_beli DESC
+        LIMIT ?
+    ");
+    $stmt->bind_param('ii', $user_id, $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function handlePenghasilan($user_id)
+{
+    $total_contents = getTotalPaidContentsByUser($user_id);
+    $total_earnings = getTotalEarningsByUser($user_id);
+    $unique_buyers = getUniqueBuyersCountByUser($user_id);
+    $top_contents = getTopSellingContentsByUser($user_id, 2);
+
+    $response = "📈 Penghasilan Kamu\n\n";
+    $response .= "🎨 Jumlah Konten Berbayar: " . $total_contents . "\n";
+    $response .= "💵 Total Pendapatan: Rp" . number_format($total_earnings, 0, ',', '.') . "\n";
+    $response .= "👥 Jumlah Pembeli Unik: " . $unique_buyers . "\n\n";
+
+    if (!empty($top_contents)) {
+        $response .= "Konten Terlaris:\n";
+        foreach ($top_contents as $content) {
+            $response .= "- " . ucfirst($content['type']) . " #" . $content['id'] . " – " . $content['jumlah_beli'] . " pembeli – Rp" . number_format($content['total'], 0, ',', '.') . "\n";
+        }
+    } else {
+        $response .= "Belum ada konten yang terjual.";
+    }
+
+    return $response;
+}
+
 ?>
