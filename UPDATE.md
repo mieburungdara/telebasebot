@@ -1,155 +1,74 @@
-Berikut daftar **perintah (commands)** dan **template pesan** yang bisa kamu kirimkan ke pengguna, lengkap dengan **tujuan dan kapan digunakan**:
+Tentu Reza, berikut lanjutan **perintah dan pesan yang bisa kamu kirimkan ke pengguna**, termasuk ide baru dan interaksi yang lebih engaging:
 
 ---
 
-## 🟢 **PERINTAH UNTUK PENGGUNA**
+## 🆕 LANJUTAN PERINTAH UNTUK PENGGUNA
 
-### 1. `/start`
+### 7. `/menu` *(dengan tombol navigasi)*
 
-> 🔹 Tujuan: Perkenalan bot & aturan awal
-> 🔹 Waktu: Saat user pertama kali kirim pesan
-
-**Contoh balasan:**
+> 🔹 Tujuan: Akses cepat ke semua fitur via tombol inline
+> 🔹 Contoh output:
 
 ```
-👋 Hai, selamat datang di bot kiriman media!
-Kamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.
+📋 Menu Utama
 
-📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.
-⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.
-
-Ketik /bantuan untuk info lebih lanjut.
+Pilih fitur yang ingin kamu akses:
+🔘 Statistik  
+🔘 Kiriman Saya  
+🔘 Top Kontributor  
+🔘 Bantuan
 ```
 
----
+Dengan `inline_keyboard`:
 
-### 2. `/bantuan`
-
-> 🔹 Tujuan: Menjelaskan fungsi-fungsi bot
-> 🔹 Waktu: Kapan saja user bingung
-
-**Contoh balasan:**
-
-```
-📖 *Panduan Bot*
-
-1. Kirim media (foto/video/teks)
-2. Klik tombol ✅ Upload atau ❌ Hapus
-3. Media kamu akan ditinjau oleh admin
-4. Jika disetujui → akan diterbitkan ke channel
-5. Kamu akan mendapat poin setiap media diterbitkan
-
-📌 Perintah:
-- /statistik → Lihat kontribusimu
-- /topkontributor → Lihat 10 kontributor terbaik
+```json
+[
+  [{"text": "📊 Statistik", "callback_data": "stat:me"}],
+  [{"text": "📁 Kiriman Saya", "callback_data": "history"}],
+  [{"text": "🏆 Top Kontributor", "callback_data": "top"}],
+  [{"text": "📖 Bantuan", "callback_data": "help"}]
+]
 ```
 
----
+### 11. `/faq` atau `/aturan`
 
-### 3. `/statistik`
+> 🔹 Berisi FAQ (Pertanyaan Umum) dan aturan pengiriman konten
 
-> 🔹 Tujuan: Tampilkan statistik kontribusi pribadi
-
-**Contoh balasan:**
+Contoh:
 
 ```
-📊 Statistik Kontribusi Kamu
+📌 FAQ
 
-✨ Total Poin: 76  
-📝 Total Kiriman: 5  
-✅ Diterbitkan: 3  
-❌ Dibatalkan: 1  
-⏳ Menunggu Editor: 1
+Q: Berapa maksimal ukuran video?
+A: Maks 50MB.
+
+Q: Berapa lama konten saya diproses?
+A: Maksimal 10 menit atau akan dipublish otomatis.
+
+Q: Bolehkah saya kirim konten promosi?
+A: Ya, selama sesuai pedoman komunitas.
 ```
 
 ---
 
-### 4. `/topkontributor`
+## 🔔 PESAN OTOMATIS (TRIGGERED)
 
-> 🔹 Tujuan: Pancing semangat user, tunjukkan leaderboard
+### E. Reminder konfirmasi
 
-**Contoh balasan:**
+> Jika user sudah kirim media tapi belum klik tombol ✅/❌
 
 ```
-🏆 Top 10 Kontributor:
-
-1. @reza_dev – 152 poin  
-2. @alya88 – 140 poin  
-3. 👤 (tanpa username) – 125 poin  
-...
+⏳ Hai, kiriman kamu belum dikonfirmasi.
+Klik ✅ untuk melanjutkan, atau ❌ untuk membatalkan.
+Akan dihapus otomatis dalam 2 menit.
 ```
-
 ---
 
-### 5. `/poin` *(opsional)*
+## 📌 CATATAN
 
-> 🔹 Tujuan: Info poin user saja (lebih ringkas dari `/statistik`)
+* Kamu bisa simpan semua perintah & penjelasan ke dalam:
 
-**Contoh balasan:**
-
-```
-✨ Poin kamu saat ini: 87
-```
-
----
-
-### 6. `/histori` *(opsional)*
-
-> 🔹 Tujuan: Tampilkan 5 kiriman terakhir + status
-
-**Contoh balasan:**
-
-```
-🗂️ Riwayat Kiriman Kamu:
-
-1. Foto – Diterbitkan  
-2. Video – Dibatalkan  
-3. Teks – Menunggu Editor  
-...
-```
-
----
-
-## 🔴 **PESAN SISTEM OTOMATIS KE USER**
-
-### A. Setelah kirim media (status pending)
-
-```
-📩 Media kamu telah kami terima!
-
-Klik tombol di bawah ini:
-✅ Upload → Untuk melanjutkan ke admin
-❌ Hapus → Untuk membatalkan
-⏳ Jika tidak dikonfirmasi dalam 5 menit, akan dihapus otomatis.
-```
-
----
-
-### B. Setelah disetujui & dipublish
-
-```
-✅ Media kamu telah diterbitkan ke channel!
-
-📎 Klik tombol di bawah untuk melihat postingan:
-🔘 [Lihat Posting]
-```
-
----
-
-### C. Jika kiriman dibatalkan admin
-
-```
-❌ Mohon maaf, kiriman kamu tidak kami terbitkan kali ini.
-
-Tetap semangat dan kirim konten menarik lainnya ya! 😊
-```
-
----
-
-### D. Jika kiriman gagal dipublish
-
-```
-⚠️ Gagal menerbitkan media kamu karena kesalahan teknis. Silakan coba lagi nanti.
-```
+  * 🗂️ `/help`, atau
+  * 📋 `/menu` interaktif
 
 ---
