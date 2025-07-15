@@ -183,14 +183,20 @@ function handleCommand($chat_id, $command, $user)
             if (empty($contents)) {
                 $responseText = "Saat ini belum ada konten yang dijual.";
             } else {
-                $responseText = "Katalog Konten Berbayar:\n\n";
+                sendMessage($chat_id, "Katalog Konten Berbayar:");
                 foreach ($contents as $content) {
-                    $responseText .= "ID: " . $content['id'] . "\n";
-                    $responseText .= "Tipe: " . $content['type'] . "\n";
-                    $responseText .= "Harga: Rp" . number_format($content['price'], 2, ',', '.') . "\n";
-                    $responseText .= "Deskripsi: " . $content['caption'] . "\n";
-                    $responseText .= "Untuk membeli, gunakan /belikonten " . $content['id'] . "\n\n";
+                    $caption = "ID: " . $content['id'] . "\n";
+                    $caption .= "Harga: Rp" . number_format($content['price'], 2, ',', '.') . "\n";
+                    $caption .= "Deskripsi: " . $content['caption'] . "\n";
+                    $caption .= "Untuk membeli, gunakan /belikonten " . $content['id'];
+
+                    if ($content['type'] === 'photo' && $content['blurred_file_id']) {
+                        sendPhoto($chat_id, $content['blurred_file_id'], $caption);
+                    } else {
+                        sendMessage($chat_id, $caption);
+                    }
                 }
+                return;
             }
             break;
         case strpos($command, '/belikonten') === 0:
@@ -203,20 +209,37 @@ function handleCommand($chat_id, $command, $user)
 
                 if (!$content) {
                     $responseText = "Konten tidak ditemukan.";
-                } elseif (hasPurchased($user['id'], $content_id)) {
-                    $responseText = "Anda sudah memiliki konten ini.";
-                    sendPaidContent($user['telegram_id'], $content);
                 } else {
-                    $buyer = findUserById($user['id']);
-                    if ($buyer['balance'] < $content['price']) {
-                        $responseText = "Saldo tidak mencukupi untuk membeli konten ini.";
+                    incrementContentViews($content_id); // Increment views
+                    if (hasPurchased($user['id'], $content_id)) {
+                        $responseText = "Anda sudah memiliki konten ini.";
+                        sendPaidContent($user['telegram_id'], $content);
                     } else {
-                        $result = purchaseContent($user['id'], $content);
-                        if ($result === 'success') {
+                        $buyer = findUserById($user['id']);
+                        if ($buyer['balance'] < $content['price']) {
+                            $responseText = "Saldo tidak mencukupi untuk membeli konten ini.";
+                        } else {
+                        $purchase_id = purchaseContent($user['id'], $content);
+                        if (is_numeric($purchase_id)) {
                             $responseText = "Pembelian berhasil! Konten sedang dikirim...";
-                            sendPaidContent($user['telegram_id'], $content);
+                            sendPaidContent($user['telegram_id'], $content, $purchase_id);
+
+                            // Send rating request
+                            $rating_keyboard = [
+                                'inline_keyboard' => [
+                                    [
+                                        ['text' => '⭐', 'callback_data' => 'rate:1:' . $content['id']],
+                                        ['text' => '⭐⭐', 'callback_data' => 'rate:2:' . $content['id']],
+                                        ['text' => '⭐⭐⭐', 'callback_data' => 'rate:3:' . $content['id']],
+                                        ['text' => '⭐⭐⭐⭐', 'callback_data' => 'rate:4:' . $content['id']],
+                                        ['text' => '⭐⭐⭐⭐⭐', 'callback_data' => 'rate:5:' . $content['id']],
+                                    ]
+                                ]
+                            ];
+                            sendMessage($user['telegram_id'], "Bagaimana penilaian Anda terhadap konten ini?", $rating_keyboard);
                         } else {
                             $responseText = "Terjadi kesalahan saat memproses pembelian Anda.";
+                        }
                         }
                     }
                 }
@@ -254,6 +277,72 @@ function handleCommand($chat_id, $command, $user)
                 $responseText = "🏆 Top 10 Kreator:\n\n";
                 foreach ($top_creators as $index => $creator) {
                     $responseText .= ($index + 1) . ". " . ($creator['username'] ? '@' . $creator['username'] : '👤 (tanpa username)') . " – Rp" . number_format($creator['total_earnings'], 2, ',', '.') . "\n";
+                }
+            }
+            break;
+        case '/riwayatbeli':
+            $purchases = getPurchaseHistory($user['id']);
+            if (empty($purchases)) {
+                $responseText = "Anda belum pernah melakukan pembelian.";
+            } else {
+                $responseText = "🧾 Riwayat Pembelian Anda:\n\n";
+                foreach ($purchases as $purchase) {
+                    $responseText .= "Judul: " . ($purchase['caption'] ?: 'Tanpa Judul') . "\n";
+                    $responseText .= "Harga: Rp" . number_format($purchase['price'], 2, ',', '.') . "\n";
+                    $responseText .= "Waktu: " . $purchase['created_at'] . "\n\n";
+                }
+            }
+            break;
+        case strpos($command, '/analitik') === 0:
+            $parts = explode(' ', $command);
+            if (count($parts) < 2 || !is_numeric($parts[1])) {
+                $responseText = "Format perintah salah. Gunakan: /analitik <id_konten>";
+            } else {
+                $content_id = (int)$parts[1];
+                $content = getPaidContentById($content_id);
+
+                if (!$content || $content['user_id'] !== $user['id']) {
+                    $responseText = "Konten tidak ditemukan atau Anda bukan pemiliknya.";
+                } else {
+                    $analytics = getContentAnalytics($content_id);
+                    $conversion_rate = $analytics['total_views'] > 0 ? ($analytics['total_purchases'] / $analytics['total_views']) * 100 : 0;
+
+                    $responseText = "📊 Analitik untuk Konten ID: " . $content_id . "\n\n";
+                    $responseText .= "👀 Dilihat: " . $analytics['total_views'] . " kali\n";
+                    $responseText .= "🛒 Dibeli: " . $analytics['total_purchases'] . " kali\n";
+                    $responseText .= "📈 Tingkat Konversi: " . number_format($conversion_rate, 2) . "%\n";
+                    $responseText .= "💰 Total Pendapatan: Rp" . number_format($analytics['total_revenue'], 2, ',', '.') . "\n";
+                }
+            }
+            break;
+        case '/moderasi':
+            if ($user['role'] !== 'admin' && $user['role'] !== 'editor' && $user['role'] !== 'superadmin') {
+                $responseText = "Anda tidak memiliki izin untuk mengakses perintah ini.";
+            } else {
+                $pending_contents = getPendingContents();
+                if (empty($pending_contents)) {
+                    $responseText = "Tidak ada konten yang menunggu persetujuan.";
+                } else {
+                    foreach ($pending_contents as $content) {
+                        $keyboard = [
+                            'inline_keyboard' => [
+                                [
+                                    ['text' => '✅ Setujui', 'callback_data' => 'admin_approve_content:' . $content['id']],
+                                    ['text' => '❌ Tolak', 'callback_data' => 'admin_reject_content:' . $content['id']],
+                                ],
+                                [
+                                    ['text' => '🚫 Blokir Kreator', 'callback_data' => 'admin_block_creator:' . $content['user_id']],
+                                ]
+                            ]
+                        ];
+                        $caption = "Konten menunggu persetujuan:\n\n";
+                        $caption .= "ID: " . $content['id'] . "\n";
+                        $caption .= "Tipe: " . $content['type'] . "\n";
+                        $caption .= "Harga: Rp" . number_format($content['price'], 2, ',', '.') . "\n";
+                        $caption .= "Deskripsi: " . $content['caption'] . "\n";
+                        sendMediaToEditor($content, $caption, $keyboard);
+                    }
+                    return;
                 }
             }
             break;
@@ -306,11 +395,18 @@ function handleState($user, $message)
             if ($media_type) {
                 $file_id = getFileIdFromMessage($message, $media_type);
                 $caption = $message['caption'] ?? '';
+                $blurred_file_id = null;
+
+                if ($media_type === 'photo') {
+                    sendMessage($chat_id, "Memproses gambar blur...");
+                    $blurred_file_id = blurAndReuploadImage($file_id);
+                }
 
                 // Store temporary data
                 $temp_content_data[$user_id] = [
                     'type' => $media_type,
                     'file_id' => $file_id,
+                    'blurred_file_id' => $blurred_file_id,
                     'caption' => $caption
                 ];
 
@@ -352,18 +448,25 @@ function handleState($user, $message)
 }
 
 
-function sendPaidContent($chat_id, $content)
+function sendPaidContent($chat_id, $content, $purchase_id)
 {
+    $result = null;
     switch ($content['type']) {
         case 'photo':
-            sendPhoto($chat_id, $content['file_id'], $content['caption']);
+            $result = sendPhoto($chat_id, $content['file_id'], $content['caption']);
             break;
         case 'video':
-            sendVideo($chat_id, $content['file_id'], $content['caption']);
+            $result = sendVideo($chat_id, $content['file_id'], $content['caption']);
             break;
         case 'document':
-            sendDocument($chat_id, $content['file_id'], $content['caption']);
+            $result = sendDocument($chat_id, $content['file_id'], $content['caption']);
             break;
+    }
+
+    if (!$result || !$result['ok']) {
+        // Log the error
+        $error_message = $result['description'] ?? 'Unknown error';
+        logError($content['user_id'], $purchase_id, $error_message);
     }
 }
 

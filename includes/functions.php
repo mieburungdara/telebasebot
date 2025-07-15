@@ -361,8 +361,8 @@ function updateUserState($user_id, $state)
 function createPaidContent($user_id, $data)
 {
     $db = getDbConnection();
-    $stmt = $db->prepare("INSERT INTO paid_contents (user_id, type, file_id, caption, price) VALUES (?, ?, ?, ?, ?)");
-    $stmt->bind_param('isssd', $user_id, $data['type'], $data['file_id'], $data['caption'], $data['price']);
+    $stmt = $db->prepare("INSERT INTO paid_contents (user_id, type, file_id, blurred_file_id, caption, price, status) VALUES (?, ?, ?, ?, ?, ?, 'pending_approval')");
+    $stmt->bind_param('issssd', $user_id, $data['type'], $data['file_id'], $data['blurred_file_id'], $data['caption'], $data['price']);
     if ($stmt->execute()) {
         return $stmt->insert_id;
     }
@@ -421,11 +421,12 @@ function purchaseContent($user_id, $content)
         $stmt3 = $db->prepare("INSERT INTO purchases (user_id, content_id, price) VALUES (?, ?, ?)");
         $stmt3->bind_param('iid', $user_id, $content['id'], $content['price']);
         $stmt3->execute();
+        $purchase_id = $stmt3->insert_id;
 
         logAction($user_id, 'purchase', $content['id'], json_encode(['price' => $content['price']]));
 
         $db->commit();
-        return 'success';
+        return $purchase_id;
     } catch (Exception $e) {
         $db->rollback();
         return 'error';
@@ -512,4 +513,137 @@ function handlePenghasilan($user_id)
     return $response;
 }
 
+function getPurchaseHistory($user_id, $limit = 10)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT pc.caption, p.price, p.created_at
+        FROM purchases p
+        JOIN paid_contents pc ON p.content_id = pc.id
+        WHERE p.user_id = ?
+        ORDER BY p.created_at DESC
+        LIMIT ?
+    ");
+    $stmt->bind_param('ii', $user_id, $limit);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function incrementContentViews($content_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE paid_contents SET views = views + 1 WHERE id = ?");
+    $stmt->bind_param('i', $content_id);
+    return $stmt->execute();
+}
+
+function getContentAnalytics($content_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("
+        SELECT
+            (SELECT COUNT(*) FROM purchases WHERE content_id = ?) as total_purchases,
+            (SELECT SUM(price) FROM purchases WHERE content_id = ?) as total_revenue,
+            (SELECT views FROM paid_contents WHERE id = ?) as total_views
+    ");
+    $stmt->bind_param('iii', $content_id, $content_id, $content_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+function logError($user_id, $purchase_id, $error_message)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("INSERT INTO error_logs (user_id, purchase_id, error_message) VALUES (?, ?, ?)");
+    $stmt->bind_param('iis', $user_id, $purchase_id, $error_message);
+    return $stmt->execute();
+}
+
+function saveRating($user_id, $content_id, $rating)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("INSERT INTO ratings (user_id, content_id, rating) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE rating = ?");
+    $stmt->bind_param('iiii', $user_id, $content_id, $rating, $rating);
+    return $stmt->execute();
+}
+
+function getPendingContents($limit = 10)
+{
+    $db = getDbConnection();
+    $result = $db->query("SELECT * FROM paid_contents WHERE status = 'pending_approval' ORDER BY created_at ASC LIMIT $limit");
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+function updatePaidContentStatus($content_id, $status)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE paid_contents SET status = ? WHERE id = ?");
+    $stmt->bind_param('si', $status, $content_id);
+    return $stmt->execute();
+}
+
+function getFilePath($file_id)
+{
+    $response = apiRequest('getFile', ['file_id' => $file_id]);
+    if ($response && $response['ok']) {
+        return $response['result']['file_path'];
+    }
+    return null;
+}
+
+function downloadFile($file_path, $destination)
+{
+    $file_url = 'https://api.telegram.org/file/bot' . BOT_TOKEN . '/' . $file_path;
+    $content = file_get_contents($file_url);
+    if ($content !== false) {
+        file_put_contents($destination, $content);
+        return true;
+    }
+    return false;
+}
+
+function blurAndReuploadImage($file_id)
+{
+    $file_path = getFilePath($file_id);
+    if (!$file_path) {
+        return null;
+    }
+
+    $tmp_dir = __DIR__ . '/../tmp/';
+    if (!is_dir($tmp_dir)) {
+        mkdir($tmp_dir);
+    }
+
+    $original_file = $tmp_dir . basename($file_path);
+    if (!downloadFile($file_path, $original_file)) {
+        return null;
+    }
+
+    $image = imagecreatefromjpeg($original_file); // Assuming JPEG for simplicity
+    if ($image) {
+        for ($i = 0; $i < 50; $i++) { // Apply blur filter multiple times
+            imagefilter($image, IMG_FILTER_GAUSSIAN_BLUR);
+        }
+
+        $blurred_file = $tmp_dir . 'blurred_' . basename($file_path);
+        imagejpeg($image, $blurred_file);
+        imagedestroy($image);
+
+        // Re-upload
+        $response = apiRequest('sendPhoto', [
+            'chat_id' => EDITOR_CHANNEL_ID, // Or any chat to upload to
+            'photo'   => new CURLFile($blurred_file)
+        ]);
+
+        // Cleanup
+        unlink($original_file);
+        unlink($blurred_file);
+
+        if ($response && $response['ok']) {
+            return $response['result']['photo'][0]['file_id'];
+        }
+    }
+
+    return null;
+}
 ?>

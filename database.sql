@@ -47,9 +47,11 @@ CREATE TABLE `paid_contents` (
   `user_id` int(11) NOT NULL,
   `type` varchar(50) NOT NULL,
   `file_id` varchar(255) NOT NULL,
+  `blurred_file_id` varchar(255) DEFAULT NULL,
   `caption` text DEFAULT NULL,
   `price` decimal(10,2) NOT NULL,
-  `status` enum('active','inactive','withdrawn') NOT NULL DEFAULT 'active',
+  `status` enum('active','inactive','withdrawn','pending_approval','rejected','banned') NOT NULL DEFAULT 'pending_approval',
+  `views` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `user_id` (`user_id`),
@@ -67,4 +69,32 @@ CREATE TABLE `purchases` (
   KEY `content_id` (`content_id`),
   CONSTRAINT `purchases_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `purchases_ibfk_2` FOREIGN KEY (`content_id`) REFERENCES `paid_contents` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `error_logs` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `purchase_id` int(11) NOT NULL,
+  `error_message` text NOT NULL,
+  `refund_status` enum('pending','refunded') NOT NULL DEFAULT 'pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `user_id` (`user_id`),
+  KEY `purchase_id` (`purchase_id`),
+  CONSTRAINT `error_logs_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `error_logs_ibfk_2` FOREIGN KEY (`purchase_id`) REFERENCES `purchases` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE `ratings` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `user_id` int(11) NOT NULL,
+  `content_id` int(11) NOT NULL,
+  `rating` tinyint(1) NOT NULL,
+  `comment` text DEFAULT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `user_content` (`user_id`,`content_id`),
+  KEY `content_id` (`content_id`),
+  CONSTRAINT `ratings_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `ratings_ibfk_2` FOREIGN KEY (`content_id`) REFERENCES `paid_contents` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
