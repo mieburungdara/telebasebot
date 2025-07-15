@@ -237,9 +237,15 @@ function handleCommand($chat_id, $command, $user)
             }
             break;
         case '/penghasilan':
-            // This is a simplified version. A real implementation would need more complex queries.
-            $responseText = "Fitur Laporan Penghasilan sedang dalam pengembangan.";
-            break;
+            $responseText = handlePenghasilan($user['id']);
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => '🔘 Lihat Riwayat Transaksi', 'callback_data' => 'penghasilan:history']],
+                    [['text' => '🔘 Tarik Saldo', 'callback_data' => 'penghasilan:withdraw']]
+                ]
+            ];
+            sendMessage($chat_id, $responseText, $keyboard);
+            return;
         case '/topkreator':
             $top_creators = getTopCreators();
             if (empty($top_creators)) {
