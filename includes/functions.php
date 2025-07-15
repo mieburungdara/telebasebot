@@ -25,6 +25,23 @@ function findRawUserByTelegramId($telegram_id)
     return $stmt->get_result()->fetch_assoc();
 }
 
+function findUserByLoginToken($token)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT * FROM users WHERE login_token = ?");
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+function clearLoginToken($user_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE users SET login_token = NULL WHERE id = ?");
+    $stmt->bind_param('i', $user_id);
+    return $stmt->execute();
+}
+
 function findUserByTelegramId($telegram_id)
 {
     $user = findRawUserByTelegramId($telegram_id);
