@@ -128,8 +128,12 @@ function handleAdminAction($callback_id, $admin_user, $action, $data_parts, $edi
                 // 3. Remove keyboard from editor channel
                 editMessageReplyMarkup(EDITOR_CHANNEL_ID, $editor_message_id, null);
                 // 4. Notify user
+                $updated_user = findUserById($original_user['id']); // Refetch user to get updated balance
+                $text = "✅ Kiriman kamu diterbitkan!\n";
+                $text .= "🎁 Kamu mendapat Rp500\n";
+                $text .= "💰 Saldo kamu sekarang: Rp" . number_format($updated_user['balance'], 2, ',', '.');
+
                 $keyboard = ['inline_keyboard' => [[['text' => 'Lihat Posting', 'url' => 'https://t.me/' . PUBLIC_CHANNEL_USERNAME . '/' . $public_message_id]]]];
-                $text = "✅ Media kamu telah diterbitkan ke channel!\n\n📎 Klik tombol di bawah untuk melihat postingan:";
                 sendMessage($original_user['telegram_id'], $text, $keyboard);
                 answerCallbackQuery($callback_id, "Dipublikasikan!");
                 logAction($admin_user['id'], 'admin_publish', $db_message_id);

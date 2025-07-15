@@ -134,6 +134,37 @@ function handleCommand($chat_id, $command, $user)
             ];
             sendMessage($chat_id, $responseText, $keyboard);
             return; // Important: return to avoid sending another message
+        case $command === '/saldo':
+            $responseText = "💰 Saldo kamu: Rp" . number_format($user['balance'], 2, ',', '.') . "\n";
+            $responseText .= "🕓 Dalam proses penarikan: Rp" . number_format($user['pending_withdrawal'], 2, ',', '.') . "\n";
+            $responseText .= "🎯 Minimal tarik: Rp10.000\n";
+            $responseText .= "Gunakan perintah: /tarik <jumlah>";
+            break;
+        case strpos($command, '/tarik') === 0:
+            $parts = explode(' ', $command);
+            if (count($parts) < 2 || !is_numeric($parts[1])) {
+                $responseText = "Format perintah salah. Gunakan: /tarik <jumlah>";
+            } else {
+                $amount = (float)$parts[1];
+                $result = requestWithdrawal($user['id'], $amount);
+                if ($result === 'success') {
+                    $responseText = "📤 Permintaan penarikan Rp" . number_format($amount, 2, ',', '.') . " telah diterima.\nSilakan kirim info penarikan:\n- Nama Bank / eWallet\n- Nomor Rekening\n- Nama Pemilik\n\nKirim ke admin melalui tombol di bawah:";
+                    $keyboard = [
+                        'inline_keyboard' => [
+                            [['text' => '🔘 Hubungi Admin', 'url' => 'https://t.me/' . ADMIN_USERNAME]]
+                        ]
+                    ];
+                    sendMessage($chat_id, $responseText, $keyboard);
+                    return;
+                } elseif ($result === 'insufficient_balance') {
+                    $responseText = "Saldo tidak mencukupi untuk melakukan penarikan.";
+                } elseif ($result === 'minimum_amount') {
+                    $responseText = "Jumlah penarikan minimum adalah Rp10.000.";
+                } else {
+                    $responseText = "Terjadi kesalahan saat memproses permintaan Anda.";
+                }
+            }
+            break;
         case $command === '/faq' || $command === '/aturan':
             $responseText = "📌 FAQ\n\nQ: Berapa maksimal ukuran video?\nA: Maks 50MB.\n\nQ: Berapa lama konten saya diproses?\nA: Maksimal 10 menit atau akan dipublish otomatis.\n\nQ: Bolehkah saya kirim konten promosi?\nA: Ya, selama sesuai pedoman komunitas.";
             break;

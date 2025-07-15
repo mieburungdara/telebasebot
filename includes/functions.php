@@ -90,8 +90,9 @@ function updatePublicMessageId($message_id, $public_message_id)
 function addPointsToUser($user_id, $points_to_add)
 {
     $db = getDbConnection();
-    $stmt = $db->prepare("UPDATE users SET points = points + ? WHERE id = ?");
-    $stmt->bind_param('ii', $points_to_add, $user_id);
+    $balance_to_add = $points_to_add * 500; // 1 point = Rp500
+    $stmt = $db->prepare("UPDATE users SET points = points + ?, balance = balance + ? WHERE id = ?");
+    $stmt->bind_param('idi', $points_to_add, $balance_to_add, $user_id);
     return $stmt->execute();
 }
 
@@ -158,6 +159,35 @@ function getPostHistory($user_id, $limit = 5)
     $stmt->bind_param('ii', $user_id, $limit);
     $stmt->execute();
     return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function requestWithdrawal($user_id, $amount)
+{
+    $db = getDbConnection();
+    $user = findUserById($user_id);
+
+    if ($user['balance'] < $amount) {
+        return 'insufficient_balance';
+    }
+
+    if ($amount < 10000) {
+        return 'minimum_amount';
+    }
+
+    $db->begin_transaction();
+    try {
+        $stmt1 = $db->prepare("UPDATE users SET balance = balance - ?, pending_withdrawal = pending_withdrawal + ? WHERE id = ?");
+        $stmt1->bind_param('ddi', $amount, $amount, $user_id);
+        $stmt1->execute();
+
+        logAction($user_id, 'withdrawal_request', null, json_encode(['amount' => $amount]));
+
+        $db->commit();
+        return 'success';
+    } catch (Exception $e) {
+        $db->rollback();
+        return 'error';
+    }
 }
 
 function logAction($user_id, $action, $message_id = null, $details = null)
