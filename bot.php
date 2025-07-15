@@ -70,7 +70,7 @@ function handleCommand($chat_id, $command, $user)
             $responseText = "👋 Hai, selamat datang di bot kiriman media!\nKamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.\n\n📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.\n⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.\n\nKetik /bantuan untuk info lebih lanjut.";
             break;
         case $command === '/bantuan':
-            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik";
+            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /menu → Tampilkan menu interaktif\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik\n- /faq → Pertanyaan yang sering diajukan";
             break;
         case $command === '/topkontributor':
             $top_users = getTopContributors();
@@ -121,6 +121,21 @@ function handleCommand($chat_id, $command, $user)
                     $responseText .= ($index + 1) . ". " . ucfirst($item['type']) . " – " . $status_text . "\n";
                 }
             }
+            break;
+        case $command === '/menu':
+            $responseText = "📋 Menu Utama\n\nPilih fitur yang ingin kamu akses:";
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => '📊 Statistik', 'callback_data' => 'stat:me']],
+                    [['text' => '📁 Kiriman Saya', 'callback_data' => 'history']],
+                    [['text' => '🏆 Top Kontributor', 'callback_data' => 'top']],
+                    [['text' => '📖 Bantuan', 'callback_data' => 'help']]
+                ]
+            ];
+            sendMessage($chat_id, $responseText, $keyboard);
+            return; // Important: return to avoid sending another message
+        case $command === '/faq' || $command === '/aturan':
+            $responseText = "📌 FAQ\n\nQ: Berapa maksimal ukuran video?\nA: Maks 50MB.\n\nQ: Berapa lama konten saya diproses?\nA: Maksimal 10 menit atau akan dipublish otomatis.\n\nQ: Bolehkah saya kirim konten promosi?\nA: Ya, selama sesuai pedoman komunitas.";
             break;
         default:
             $responseText = "Perintah tidak dikenali.";
