@@ -1,85 +1,130 @@
-Mantap, Reza! Kalau kamu ingin menambahkan **fitur saldo** untuk user, berikut adalah **alur dan konsep lengkapnya**, termasuk bagaimana user bisa:
-
-* Memiliki saldo 💰
-* Menarik saldo ke rekening / e-wallet 💸
+Keren banget idenya, Reza. Ini masuk ke model **“paid content system”** — user bisa **jual konten** lewat bot, dan pengguna lain **membayar untuk membuka**. Bisa diterapkan buat foto, video, dokumen, atau bahkan teks eksklusif.
 
 ---
 
-## 🧱 1. STRUKTUR DASAR (SALDO USER)
+## 🔁 ALUR KERJA FITUR MONETISASI KONTEN
 
-### Tambah Kolom di DB:
+### 🧑‍🎨 User A (Kreator)
 
-* Di tabel `users`:
-
-  * `balance` → total saldo saat ini
-  * `pending_withdrawal` → sedang proses penarikan
-
----
-
-## 🔄 2. CARA USER MENDAPAT SALDO
-
-Berikut beberapa cara agar user bisa mengumpulkan saldo:
-
-### A. **Dari Media yg Diterbitkan**
-
-> Misal: 1 kiriman diterbitkan = +Rp500
-
-```plaintext
-✅ Kiriman kamu diterbitkan!
-🎁 Kamu mendapat Rp500
-💰 Saldo kamu sekarang: Rp3.500
-```
-
-### B. **Dari Bonus Kontributor / Tantangan**
-
-> Kirim 5 media dalam seminggu = +Rp2.000
-
-### C. **Dari Komisi Afiliasi / Referral**
-
-> Undang teman pakai link / kode = bonus Rp1.000
+1. Kirim konten ke bot → isi caption & *“tarif akses”*
+2. Bot menyimpan konten + harga di DB
+3. Bot tampilkan tombol:
+   🔘 *“Publikasikan (berbayar)”*
 
 ---
 
-## 💳 3. CEK SALDO
+### 👥 User B (Pembeli)
 
-User bisa gunakan `/saldo` untuk melihat:
+1. Melihat teaser konten (via channel atau bot):
 
-```
-💰 Saldo kamu: Rp4.500
-🕓 Dalam proses penarikan: Rp0
-🎯 Minimal tarik: Rp10.000
-Gunakan perintah: /tarik <jumlah>
-```
+   ```
+   📷 Konten oleh @userA  
+   🔐 Konten terkunci – Rp3.000  
+   Klik untuk membuka via bot
+   ```
+
+2. Klik → diarahkan ke bot via deep link (misal: `https://t.me/YourBot?start=konten_123`)
+
+3. Bot periksa:
+
+   * Apakah User B sudah membeli konten ini?
+
+     * ✅ Ya → kirim konten
+     * ❌ Tidak → tampilkan:
+
+       ```
+       💰 Harga konten: Rp3.000  
+       Saldo kamu: Rp2.000  
+       ⛔ Tidak cukup saldo
+       🔘 Isi Saldo | 🔘 Batal
+       ```
+
+       atau jika cukup saldo:
+
+       ```
+       🔐 Konten ini seharga Rp3.000  
+       ➖ Saldo akan dipotong  
+       🔘 Buka Sekarang
+       ```
+
+4. Setelah klik “Buka Sekarang”:
+
+   * Bot potong saldo User B
+   * Kirim konten (dengan caption aslinya)
+   * Tambahkan riwayat pembelian di DB
+
+---
+
+## 💰 PEMBAGIAN PENDAPATAN
+
+* Bisa buat model bagi hasil (contoh):
+
+  * 90% masuk ke kreator
+  * 10% jadi fee sistem
+* Saldo kreator bisa ditarik via `/tarik`
 
 ---
 
-## 🏧 4. TARIK SALDO (MANUAL)
+## 🧱 STRUKTUR DATABASE TAMBAHAN
 
-### Format:
+### Tabel: `paid_contents`
 
-```
-/tarik 15000
-```
+| Kolom    | Fungsi                     |
+| -------- | -------------------------- |
+| id       | ID konten                  |
+| user\_id | Pemilik konten             |
+| type     | photo / video / text       |
+| file\_id | ID media Telegram          |
+| caption  | Caption                    |
+| price    | Harga                      |
+| status   | aktif / nonaktif / ditarik |
 
-Bot akan balas:
+### Tabel: `purchases`
 
-```
-📤 Permintaan penarikan Rp15.000 telah diterima.
-Silakan kirim info penarikan:
-- Nama Bank / eWallet
-- Nomor Rekening
-- Nama Pemilik
-
-Kirim ke admin melalui tombol di bawah:
-🔘 Hubungi Admin
-```
-
-
-## 🚫 6. BATASAN & KEAMANAN
-
-| Proteksi           | Penjelasan                                          |
-| ------------------ | --------------------------------------------------- |
-| Minimum Penarikan  | Misal: Rp10.000                                     |
-| Pending Withdrawal | Saldo tidak bisa ditarik dua kali                   |
+| Kolom       | Fungsi            |
+| ----------- | ----------------- |
+| user\_id    | Pembeli           |
+| content\_id | ID konten         |
+| price       | Harga saat dibeli |
+| created\_at | Tanggal beli      |
 
 ---
+
+## ✅ FITUR PENDUKUNG
+
+| Fitur                   | Penjelasan                            |
+| ------------------      | ------------------------------------- |
+| `/buatkonten`           | User upload + pasang harga            |
+| `/katalog`              | Melihat semua konten berbayar publik  |
+| `/belikonten <id>`      | Shortcut beli konten                  |
+| `/kontenku`             | Melihat semua konten yg pernah dibuat |
+| `/penghasilan <id>`     | Laporan penghasilan konten            |
+
+---
+
+## 📌 CATATAN KEAMANAN
+
+* Jangan kirim konten pakai `sendMessage` biasa → pakai `sendMediaGroup` / `sendPhoto` agar file tidak bisa dishare sembarangan
+* Tampilkan hanya `preview` atau blur (teaser) di channel publik
+* Gunakan `start param` untuk redirect user ke konten berbayar
+* Jangan tampilkan harga langsung di caption publik → pakai tombol & inline message
+
+---
+
+## 🧠 NILAI TAMBAH UNTUK KREATOR
+
+* Kreator bisa edit harga / menonaktifkan konten
+* Laporan total konten dibeli berapa kali
+* Ranking kreator terlaris (`/topkreator`)
+
+---
+
+## 🔥 SIMULASI KASUS
+
+> User A (kontributor) mengirim foto karya seni dan pasang harga Rp5.000
+> User B klik preview → bot bilang “Rp5.000 untuk lihat konten ini”
+> Setelah bayar → langsung dikirim
+> Rp4.000 masuk saldo User A, Rp1.000 jadi fee sistem
+
+---
+
