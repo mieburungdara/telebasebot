@@ -190,6 +190,30 @@ function requestWithdrawal($user_id, $amount)
     }
 }
 
+function getUserCreations($user_id, $limit = 10)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT * FROM paid_contents WHERE user_id = ? ORDER BY created_at DESC LIMIT ?");
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+}
+
+function getTopCreators($limit = 10)
+{
+    $db = getDbConnection();
+    $result = $db->query("
+        SELECT u.username, SUM(p.price) as total_earnings
+        FROM purchases p
+        JOIN paid_contents pc ON p.content_id = pc.id
+        JOIN users u ON pc.user_id = u.id
+        GROUP BY u.id
+        ORDER BY total_earnings DESC
+        LIMIT $limit
+    ");
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
 function logAction($user_id, $action, $message_id = null, $details = null)
 {
     $db = getDbConnection();
@@ -264,6 +288,33 @@ function editMessageReplyMarkup($chat_id, $message_id, $keyboard = null)
     return apiRequest('editMessageReplyMarkup', $params);
 }
 
+function sendPhoto($chat_id, $file_id, $caption = null)
+{
+    $params = ['chat_id' => $chat_id, 'photo' => $file_id];
+    if ($caption) {
+        $params['caption'] = $caption;
+    }
+    return apiRequest('sendPhoto', $params);
+}
+
+function sendVideo($chat_id, $file_id, $caption = null)
+{
+    $params = ['chat_id' => $chat_id, 'video' => $file_id];
+    if ($caption) {
+        $params['caption'] = $caption;
+    }
+    return apiRequest('sendVideo', $params);
+}
+
+function sendDocument($chat_id, $file_id, $caption = null)
+{
+    $params = ['chat_id' => $chat_id, 'document' => $file_id];
+    if ($caption) {
+        $params['caption'] = $caption;
+    }
+    return apiRequest('sendDocument', $params);
+}
+
 
 function answerCallbackQuery($callback_query_id, $text = '', $show_alert = false)
 {
@@ -296,6 +347,88 @@ function getFileIdFromMessage($message, $media_type)
             return $message['document']['file_id'];
         default:
             return null;
+    }
+}
+
+function updateUserState($user_id, $state)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE users SET state = ? WHERE id = ?");
+    $stmt->bind_param('si', $state, $user_id);
+    return $stmt->execute();
+}
+
+function createPaidContent($user_id, $data)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("INSERT INTO paid_contents (user_id, type, file_id, caption, price) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param('isssd', $user_id, $data['type'], $data['file_id'], $data['caption'], $data['price']);
+    if ($stmt->execute()) {
+        return $stmt->insert_id;
+    }
+    return false;
+}
+
+function getPaidContentForSale($limit = 10)
+{
+    $db = getDbConnection();
+    $result = $db->query("SELECT * FROM paid_contents WHERE status = 'active' ORDER BY created_at DESC LIMIT $limit");
+    return $result->fetch_all(MYSQLI_ASSOC);
+}
+
+function getPaidContentById($content_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT * FROM paid_contents WHERE id = ?");
+    $stmt->bind_param('i', $content_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc();
+}
+
+function hasPurchased($user_id, $content_id)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT id FROM purchases WHERE user_id = ? AND content_id = ?");
+    $stmt->bind_param('ii', $user_id, $content_id);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc() !== null;
+}
+
+function purchaseContent($user_id, $content)
+{
+    $db = getDbConnection();
+    $creator = findUserById($content['user_id']);
+    $buyer = findUserById($user_id);
+
+    if ($buyer['balance'] < $content['price']) {
+        return 'insufficient_balance';
+    }
+
+    $db->begin_transaction();
+    try {
+        // Deduct from buyer
+        $stmt1 = $db->prepare("UPDATE users SET balance = balance - ? WHERE id = ?");
+        $stmt1->bind_param('di', $content['price'], $user_id);
+        $stmt1->execute();
+
+        // Add to creator (90% cut)
+        $earnings = $content['price'] * 0.9;
+        $stmt2 = $db->prepare("UPDATE users SET balance = balance + ? WHERE id = ?");
+        $stmt2->bind_param('di', $earnings, $content['user_id']);
+        $stmt2->execute();
+
+        // Record purchase
+        $stmt3 = $db->prepare("INSERT INTO purchases (user_id, content_id, price) VALUES (?, ?, ?)");
+        $stmt3->bind_param('iid', $user_id, $content['id'], $content['price']);
+        $stmt3->execute();
+
+        logAction($user_id, 'purchase', $content['id'], json_encode(['price' => $content['price']]));
+
+        $db->commit();
+        return 'success';
+    } catch (Exception $e) {
+        $db->rollback();
+        return 'error';
     }
 }
 
