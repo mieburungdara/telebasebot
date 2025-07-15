@@ -8,6 +8,7 @@ CREATE TABLE `users` (
   `pending_withdrawal` decimal(10,2) NOT NULL DEFAULT 0.00,
   `is_banned` tinyint(1) NOT NULL DEFAULT '0',
   `state` varchar(255) DEFAULT NULL,
+  `login_token` varchar(64) DEFAULT NULL,
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   UNIQUE KEY `telegram_id` (`telegram_id`)

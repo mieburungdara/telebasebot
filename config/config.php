@@ -8,6 +8,7 @@ define('DB_NAME', 'telegram_bot');
 
 // --- BOT CONFIGURATION ---
 define('BOT_TOKEN', 'YOUR_BOT_TOKEN');
+define('BOT_USERNAME', 'YOUR_BOT_USERNAME');
 
 // --- CHANNEL CONFIGURATION ---
 define('EDITOR_CHANNEL_ID', 'YOUR_EDITOR_CHANNEL_ID');

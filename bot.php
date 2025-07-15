@@ -57,6 +57,12 @@ function processMessage($message)
         return;
     }
 
+    // Handle start parameter for login
+    if (strpos($text, '/start login') === 0) {
+        handleLoginCommand($chat_id, $user);
+        return;
+    }
+
     // Handle media
     $media_type = getMediaType($message);
     if ($media_type) {
@@ -72,6 +78,9 @@ function handleCommand($chat_id, $command, $user)
 {
     // Simple command routing
     switch (true) {
+        case $command === '/login':
+            handleLoginCommand($chat_id, $user);
+            return;
         case $command === '/start':
             $responseText = "👋 Hai, selamat datang di bot kiriman media!\nKamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.\n\n📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.\n⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.\n\nKetik /bantuan untuk info lebih lanjut.";
             break;
@@ -351,6 +360,30 @@ function handleCommand($chat_id, $command, $user)
             break;
     }
     sendMessage($chat_id, $responseText);
+}
+
+function handleLoginCommand($chat_id, $user)
+{
+    $token = createLoginToken($user['id']);
+    if ($token) {
+        $loginLink = "http://{$_SERVER['HTTP_HOST']}/auth/callback.php?token={$token}";
+        $responseText = "Klik link ini untuk login: {$loginLink}";
+    } else {
+        $responseText = "Gagal membuat link login. Coba lagi nanti.";
+    }
+    sendMessage($chat_id, $responseText);
+}
+
+function createLoginToken($user_id)
+{
+    $token = bin2hex(random_bytes(32));
+    $db = getDbConnection();
+    $stmt = $db->prepare("UPDATE users SET login_token = ? WHERE id = ?");
+    $stmt->bind_param('si', $token, $user_id);
+    if ($stmt->execute()) {
+        return $token;
+    }
+    return null;
 }
 
 function handleMedia($message, $user, $media_type)

@@ -1,25 +1,32 @@
 <?php
 session_start();
+require_once __DIR__ . '/../config/config.php';
+require_once __DIR__ . '/../includes/functions.php';
 
-if (isset($_GET['token']) && isset($_SESSION['login_token']) && $_GET['token'] === $_SESSION['login_token']) {
-    // Token valid, buat sesi untuk pengguna
-    $_SESSION['username'] = $_SESSION['login_username'];
+if (isset($_GET['token'])) {
+    $token = $_GET['token'];
 
-    // Di dunia nyata, Anda akan mengambil peran pengguna dari database
-    // berdasarkan username mereka. Untuk saat ini, kita akan memberikan peran
-    // secara acak untuk tujuan demonstrasi.
-    $roles = ['member', 'editor', 'admin'];
-    $_SESSION['role'] = $roles[array_rand($roles)];
+    // Find user by login token
+    $user = findUserByLoginToken($token);
 
-    // Hapus token dari sesi
-    unset($_SESSION['login_token']);
-    unset($_SESSION['login_username']);
+    if ($user) {
+        // Valid token, create session for the user
+        $_SESSION['user_id'] = $user['id'];
+        $_SESSION['username'] = $user['username'];
+        $_SESSION['role'] = $user['role'];
 
-    // Arahkan pengguna ke halaman yang sesuai
-    header('Location: ../pages/' . $_SESSION['role'] . '.php');
-    exit();
+        // Remove the token from the database
+        clearLoginToken($user['id']);
+
+        // Redirect user to the appropriate page
+        header('Location: ../pages/' . $_SESSION['role'] . '.php');
+        exit();
+    } else {
+        // Invalid token
+        echo "Link login tidak valid atau telah kedaluwarsa.";
+    }
 } else {
-    // Token tidak valid
-    echo "Link login tidak valid atau telah kedaluwarsa.";
+    // No token provided
+    echo "Token tidak ditemukan.";
 }
 ?>
