@@ -1,7 +1,8 @@
 CREATE TABLE `users` (
   `id` int(11) NOT NULL AUTO_INCREMENT,
   `telegram_id` bigint(20) NOT NULL,
-  `username` varchar(255) DEFAULT NULL,
+  `real_username` varchar(255) DEFAULT NULL,
+  `generated_username` varchar(8) DEFAULT NULL,
   `role` enum('member','editor','admin','superadmin') NOT NULL DEFAULT 'member',
   `points` int(11) NOT NULL DEFAULT 0,
   `balance` decimal(10,2) NOT NULL DEFAULT 0.00,

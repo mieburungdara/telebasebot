@@ -94,7 +94,7 @@ function handleCommand($chat_id, $command, $user)
             } else {
                 $responseText = "🏆 Top 10 Kontributor:\n\n";
                 foreach ($top_users as $index => $top_user) {
-                    $responseText .= ($index + 1) . ". " . ($top_user['username'] ? '@' . $top_user['username'] : '👤 (tanpa username)') . " – " . $top_user['points'] . " poin\n";
+                    $responseText .= ($index + 1) . ". " . ($top_user['generated_username'] ? '@' . $top_user['generated_username'] : '👤 (tanpa username)') . " – " . $top_user['points'] . " poin\n";
                 }
             }
             break;
@@ -285,7 +285,7 @@ function handleCommand($chat_id, $command, $user)
             } else {
                 $responseText = "🏆 Top 10 Kreator:\n\n";
                 foreach ($top_creators as $index => $creator) {
-                    $responseText .= ($index + 1) . ". " . ($creator['username'] ? '@' . $creator['username'] : '👤 (tanpa username)') . " – Rp" . number_format($creator['total_earnings'], 2, ',', '.') . "\n";
+                    $responseText .= ($index + 1) . ". " . ($creator['generated_username'] ? '@' . $creator['generated_username'] : '👤 (tanpa username)') . " – Rp" . number_format($creator['total_earnings'], 2, ',', '.') . "\n";
                 }
             }
             break;

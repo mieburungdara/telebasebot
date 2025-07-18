@@ -25,6 +25,34 @@ function findRawUserByTelegramId($telegram_id)
     return $stmt->get_result()->fetch_assoc();
 }
 
+function isUsernameExists($username)
+{
+    $db = getDbConnection();
+    $stmt = $db->prepare("SELECT id FROM users WHERE generated_username = ?");
+    $stmt->bind_param('s', $username);
+    $stmt->execute();
+    return $stmt->get_result()->fetch_assoc() !== null;
+}
+
+function generateUniqueUsername()
+{
+    $length = 8;
+    $characters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    $char_length = strlen($characters);
+
+    do {
+        $username = '';
+        // Ensure the first character is a letter
+        $username .= 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'[rand(0, 51)];
+
+        for ($i = 1; $i < $length; $i++) {
+            $username .= $characters[rand(0, $char_length - 1)];
+        }
+    } while (isUsernameExists($username));
+
+    return $username;
+}
+
 function findUserByLoginToken($token)
 {
     $db = getDbConnection();
@@ -60,14 +88,15 @@ function findUserById($id)
     return $stmt->get_result()->fetch_assoc();
 }
 
-function createUser($telegram_id, $username)
+function createUser($telegram_id, $real_username)
 {
     $db = getDbConnection();
-    $stmt = $db->prepare("INSERT INTO users (telegram_id, username) VALUES (?, ?)");
-    $stmt->bind_param('is', $telegram_id, $username);
+    $generated_username = generateUniqueUsername();
+    $stmt = $db->prepare("INSERT INTO users (telegram_id, real_username, generated_username) VALUES (?, ?, ?)");
+    $stmt->bind_param('iss', $telegram_id, $real_username, $generated_username);
     $stmt->execute();
     $user_id = $stmt->insert_id;
-    return ['id' => $user_id, 'telegram_id' => $telegram_id, 'username' => $username, 'role' => 'member', 'points' => 0];
+    return ['id' => $user_id, 'telegram_id' => $telegram_id, 'real_username' => $real_username, 'generated_username' => $generated_username, 'role' => 'member', 'points' => 0];
 }
 
 function saveMessageToDb($user_id, $message_id, $type, $content, $caption)
@@ -140,7 +169,7 @@ function isUserBanned($user_id)
 function getTopContributors($limit = 10)
 {
     $db = getDbConnection();
-    $result = $db->query("SELECT username, points FROM users ORDER BY points DESC LIMIT $limit");
+    $result = $db->query("SELECT generated_username, points FROM users ORDER BY points DESC LIMIT $limit");
     return $result->fetch_all(MYSQLI_ASSOC);
 }
 
@@ -220,7 +249,7 @@ function getTopCreators($limit = 10)
 {
     $db = getDbConnection();
     $result = $db->query("
-        SELECT u.username, SUM(p.price) as total_earnings
+        SELECT u.generated_username, SUM(p.price) as total_earnings
         FROM purchases p
         JOIN paid_contents pc ON p.content_id = pc.id
         JOIN users u ON pc.user_id = u.id
