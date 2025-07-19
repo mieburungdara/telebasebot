@@ -85,8 +85,18 @@ function handleCommand($chat_id, $command, $user)
             $responseText = "👋 Hai, selamat datang di bot kiriman media!\nKamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.\n\n📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.\n⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.\n\nKetik /bantuan untuk info lebih lanjut.";
             break;
         case $command === '/bantuan':
-            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /menu → Tampilkan menu interaktif\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik\n- /faq → Pertanyaan yang sering diajukan";
-            break;
+            $responseText = "Pilih kategori bantuan yang kamu perlukan:";
+            $keyboard = [
+                'inline_keyboard' => [
+                    [['text' => 'Tentang Bot', 'callback_data' => 'help:about']],
+                    [['text' => 'Cara Jual Konten', 'callback_data' => 'help:sell']],
+                    [['text' => 'Cara Beli Konten', 'callback_data' => 'help:buy']],
+                    [['text' => 'Aturan Komunitas', 'callback_data' => 'help:rules']],
+                    [['text' => 'Lapor Masalah', 'callback_data' => 'help:report']]
+                ]
+            ];
+            sendMessage($chat_id, $responseText, $keyboard);
+            return;
         case $command === '/topkontributor':
             $top_users = getTopContributors();
             if (empty($top_users)) {

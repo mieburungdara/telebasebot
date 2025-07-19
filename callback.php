@@ -96,9 +96,33 @@ function processCallbackQuery($callback_query)
             answerCallbackQuery($callback_id);
             break;
         case 'help':
-            // Handle the '/bantuan' command logic here
-            $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /menu → Tampilkan menu interaktif\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik\n- /faq → Pertanyaan yang sering diajukan";
-            editMessageText($chat_id, $message_id, $responseText);
+            $help_type = $parts[1] ?? 'main';
+            $responseText = '';
+            $keyboard = null;
+
+            switch ($help_type) {
+                case 'about':
+                    $responseText = "Bot ini adalah platform untuk berbagi dan menjual konten. Anda bisa menjadi kontributor dengan mengirimkan media, atau menjadi kreator dengan menjual konten premium.";
+                    break;
+                case 'sell':
+                    $responseText = "Untuk menjual konten:\n1. Gunakan perintah /buatkonten.\n2. Kirim media yang ingin dijual.\n3. Masukkan harga.\n4. Konten Anda akan ditinjau oleh admin sebelum ditampilkan di /katalog.";
+                    break;
+                case 'buy':
+                    $responseText = "Untuk membeli konten:\n1. Lihat konten yang tersedia di /katalog.\n2. Gunakan perintah /belikonten <ID>.\n3. Pastikan saldo Anda mencukupi.\n4. Konten akan dikirimkan setelah pembayaran berhasil.";
+                    break;
+                case 'rules':
+                    $responseText = "Aturan Komunitas:\n- Dilarang mengirim konten SARA, pornografi, dan kekerasan.\n- Dilarang melakukan spamming.\n- Hormati semua anggota komunitas.\n- Pelanggaran akan menyebabkan pemblokiran.";
+                    break;
+                case 'report':
+                    $responseText = "Untuk melaporkan masalah atau pengguna, silakan hubungi admin dengan menyertakan bukti yang jelas.";
+                    $keyboard = ['inline_keyboard' => [[['text' => 'Hubungi Admin', 'url' => 'https://t.me/' . ADMIN_USERNAME]]]];
+                    break;
+                default:
+                    $responseText = "📖 *Panduan Bot*\n\n1. Kirim media (foto/video/teks)\n2. Klik tombol ✅ Upload atau ❌ Hapus\n3. Media kamu akan ditinjau oleh admin\n4. Jika disetujui → akan diterbitkan ke channel\n5. Kamu akan mendapat poin setiap media diterbitkan\n\n📌 Perintah:\n- /menu → Tampilkan menu interaktif\n- /statistik → Lihat kontribusimu\n- /topkontributor → Lihat 10 kontributor terbaik\n- /faq → Pertanyaan yang sering diajukan";
+                    break;
+            }
+
+            editMessageText($chat_id, $message_id, $responseText, $keyboard);
             answerCallbackQuery($callback_id);
             break;
         case 'rate':
