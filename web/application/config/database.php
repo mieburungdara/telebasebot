@@ -75,10 +75,10 @@ $query_builder = TRUE;
 
 $db['default'] = array(
 	'dsn'	=> '',
-	'hostname' => 'localhost',
-	'username' => 'root',
-	'password' => '',
-	'database' => 'telegram_bot',
+	'hostname' => getenv('CI_DB_HOSTNAME'),
+	'username' => getenv('CI_DB_USERNAME'),
+	'password' => getenv('CI_DB_PASSWORD'),
+	'database' => getenv('CI_DB_DATABASE'),
 	'dbdriver' => 'mysqli',
 	'dbprefix' => '',
 	'pconnect' => FALSE,
