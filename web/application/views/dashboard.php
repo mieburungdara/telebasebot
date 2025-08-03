@@ -23,6 +23,12 @@
             <p>Periksa saldo Anda, lakukan pembelian, dan tarik dana.</p>
             <a href="/dashboard/saldo">Kelola Saldo</a>
         </div>
+
+        <div class="feature-box">
+            <h2>Manajemen Bot</h2>
+            <p>Kelola bot telegram anda.</p>
+            <a href="/bot">Kelola Bot</a>
+        </div>
     </div>
 </div>
 
