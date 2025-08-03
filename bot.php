@@ -1,8 +1,14 @@
 <?php
 
+require_once __DIR__ . '/autoloader.php';
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/includes/functions.php';
 require_once __DIR__ . '/callback.php';
+
+use Bot\Database;
+use Bot\TelegramAPI;
+use Bot\Models\User;
+use Bot\CommandRouter;
 
 // Get the update from Telegram
 $update = json_decode(file_get_contents('php://input'), true);
@@ -28,17 +34,17 @@ function processMessage($message)
     $text = $message['text'] ?? '';
 
     // Check if user exists
-    $user = findUserByTelegramId($user_id);
+    $user = User::findUserByTelegramId($user_id);
     if (!$user) {
         // If user not found, check if they are banned before creating a new one
-        $raw_user = findRawUserByTelegramId($user_id);
+        $raw_user = User::findRawUserByTelegramId($user_id);
         if ($raw_user && $raw_user['is_banned']) {
             // User is banned, so we do nothing.
             return;
         }
         // If not banned and not found, create a new user
         if (!$raw_user) {
-            $user = createUser($user_id, $username);
+            $user = User::createUser($user_id, $username);
         } else {
             // This case should technically not be reached if findUserByTelegramId is working correctly
             $user = $raw_user;
@@ -71,19 +77,24 @@ function processMessage($message)
     }
 
     // Default response for other messages
-    sendMessage($chat_id, 'Saya hanya menerima kiriman media (foto, video, atau dokumen) dan perintah (command).');
+    TelegramAPI::sendMessage($chat_id, 'Saya hanya menerima kiriman media (foto, video, atau dokumen) dan perintah (command).');
 }
 
 function handleCommand($chat_id, $command, $user)
 {
+    $router = new CommandRouter();
+    $command_handler = $router->route($command);
+
+    if ($command_handler) {
+        $command_handler->execute($chat_id, $user);
+        return;
+    }
+
     // Simple command routing
     switch (true) {
         case $command === '/login':
             handleLoginCommand($chat_id, $user);
             return;
-        case $command === '/start':
-            $responseText = "👋 Hai, selamat datang di bot kiriman media!\nKamu bisa mengirimkan foto, video, atau teks untuk kami moderasi dan publikasikan ke channel publik.\n\n📌 Setelah kirim, kamu akan dapat tombol untuk mengkonfirmasi.\n⏳ Jika tidak dikonfirmasi dalam 5 menit, kiriman akan dihapus otomatis.\n\nKetik /bantuan untuk info lebih lanjut.";
-            break;
         case $command === '/bantuan':
             $responseText = "Pilih kategori bantuan yang kamu perlukan:";
             $keyboard = [
@@ -95,10 +106,10 @@ function handleCommand($chat_id, $command, $user)
                     [['text' => 'Lapor Masalah', 'callback_data' => 'help:report']]
                 ]
             ];
-            sendMessage($chat_id, $responseText, $keyboard);
+            TelegramAPI::sendMessage($chat_id, $responseText, $keyboard);
             return;
         case $command === '/topkontributor':
-            $top_users = getTopContributors();
+            $top_users = User::getTopContributors();
             if (empty($top_users)) {
                 $responseText = "Belum ada kontributor.";
             } else {
@@ -109,7 +120,7 @@ function handleCommand($chat_id, $command, $user)
             }
             break;
         case $command === '/statistik':
-            $stats = getUserStats($user['id']);
+            $stats = User::getUserStats($user['id']);
             $responseText = "📊 Statistik Kontribusi Kamu\n\n";
             $responseText .= "✨ Total Poin: " . $user['points'] . "  \n";
             $responseText .= "📝 Total Kiriman: " . $stats['total_posts'] . "  \n";
@@ -122,7 +133,7 @@ function handleCommand($chat_id, $command, $user)
             break;
         case $command === '/histori':
             // Assuming you implement getPostHistory function
-            $history = getPostHistory($user['id'], 5);
+            $history = User::getPostHistory($user['id'], 5);
             if (empty($history)) {
                 $responseText = "🗂️ Riwayat Kiriman Kamu:\n\nBelum ada kiriman.";
             } else {
@@ -157,7 +168,7 @@ function handleCommand($chat_id, $command, $user)
                     [['text' => '📖 Bantuan', 'callback_data' => 'help']]
                 ]
             ];
-            sendMessage($chat_id, $responseText, $keyboard);
+            TelegramAPI::sendMessage($chat_id, $responseText, $keyboard);
             return; // Important: return to avoid sending another message
         case $command === '/saldo':
             $responseText = "💰 Saldo kamu: Rp" . number_format($user['balance'], 2, ',', '.') . "\n";
@@ -171,7 +182,7 @@ function handleCommand($chat_id, $command, $user)
                 $responseText = "Format perintah salah. Gunakan: /tarik <jumlah>";
             } else {
                 $amount = (float)$parts[1];
-                $result = requestWithdrawal($user['id'], $amount);
+                $result = User::requestWithdrawal($user['id'], $amount);
                 if ($result === 'success') {
                     $responseText = "📤 Permintaan penarikan Rp" . number_format($amount, 2, ',', '.') . " telah diterima.\nSilakan kirim info penarikan:\n- Nama Bank / eWallet\n- Nomor Rekening\n- Nama Pemilik\n\nKirim ke admin melalui tombol di bawah:";
                     $keyboard = [
@@ -179,7 +190,7 @@ function handleCommand($chat_id, $command, $user)
                             [['text' => '🔘 Hubungi Admin', 'url' => 'https://t.me/' . ADMIN_USERNAME]]
                         ]
                     ];
-                    sendMessage($chat_id, $responseText, $keyboard);
+                    TelegramAPI::sendMessage($chat_id, $responseText, $keyboard);
                     return;
                 } elseif ($result === 'insufficient_balance') {
                     $responseText = "Saldo tidak mencukupi untuk melakukan penarikan.";
@@ -194,15 +205,15 @@ function handleCommand($chat_id, $command, $user)
             $responseText = "📌 FAQ\n\nQ: Berapa maksimal ukuran video?\nA: Maks 50MB.\n\nQ: Berapa lama konten saya diproses?\nA: Maksimal 10 menit atau akan dipublish otomatis.\n\nQ: Bolehkah saya kirim konten promosi?\nA: Ya, selama sesuai pedoman komunitas.";
             break;
         case '/buatkonten':
-            updateUserState($user['id'], 'create_content_media');
+            User::updateUserState($user['id'], 'create_content_media');
             $responseText = "Silakan kirim media yang ingin Anda jual.";
             break;
         case '/katalog':
-            $contents = getPaidContentForSale();
+            $contents = Database::getPaidContentForSale();
             if (empty($contents)) {
                 $responseText = "Saat ini belum ada konten yang dijual.";
             } else {
-                sendMessage($chat_id, "Katalog Konten Berbayar:");
+                TelegramAPI::sendMessage($chat_id, "Katalog Konten Berbayar:");
                 foreach ($contents as $content) {
                     $caption = "ID: " . $content['id'] . "\n";
                     $caption .= "Harga: Rp" . number_format($content['price'], 2, ',', '.') . "\n";
@@ -210,9 +221,9 @@ function handleCommand($chat_id, $command, $user)
                     $caption .= "Untuk membeli, gunakan /belikonten " . $content['id'];
 
                     if ($content['type'] === 'photo' && $content['blurred_file_id']) {
-                        sendPhoto($chat_id, $content['blurred_file_id'], $caption);
+                        TelegramAPI::sendPhoto($chat_id, $content['blurred_file_id'], $caption);
                     } else {
-                        sendMessage($chat_id, $caption);
+                        TelegramAPI::sendMessage($chat_id, $caption);
                     }
                 }
                 return;
@@ -224,21 +235,21 @@ function handleCommand($chat_id, $command, $user)
                 $responseText = "Format perintah salah. Gunakan: /belikonten <id_konten>";
             } else {
                 $content_id = (int)$parts[1];
-                $content = getPaidContentById($content_id);
+                $content = Database::getPaidContentById($content_id);
 
                 if (!$content) {
                     $responseText = "Konten tidak ditemukan.";
                 } else {
-                    incrementContentViews($content_id); // Increment views
-                    if (hasPurchased($user['id'], $content_id)) {
+                    Database::incrementContentViews($content_id); // Increment views
+                    if (Database::hasPurchased($user['id'], $content_id)) {
                         $responseText = "Anda sudah memiliki konten ini.";
                         sendPaidContent($user['telegram_id'], $content);
                     } else {
-                        $buyer = findUserById($user['id']);
+                        $buyer = User::findUserById($user['id']);
                         if ($buyer['balance'] < $content['price']) {
                             $responseText = "Saldo tidak mencukupi untuk membeli konten ini.";
                         } else {
-                        $purchase_id = purchaseContent($user['id'], $content);
+                        $purchase_id = Database::purchaseContent($user['id'], $content);
                         if (is_numeric($purchase_id)) {
                             $responseText = "Pembelian berhasil! Konten sedang dikirim...";
                             sendPaidContent($user['telegram_id'], $content, $purchase_id);
@@ -255,7 +266,7 @@ function handleCommand($chat_id, $command, $user)
                                     ]
                                 ]
                             ];
-                            sendMessage($user['telegram_id'], "Bagaimana penilaian Anda terhadap konten ini?", $rating_keyboard);
+                            TelegramAPI::sendMessage($user['telegram_id'], "Bagaimana penilaian Anda terhadap konten ini?", $rating_keyboard);
                         } else {
                             $responseText = "Terjadi kesalahan saat memproses pembelian Anda.";
                         }
@@ -265,7 +276,7 @@ function handleCommand($chat_id, $command, $user)
             }
             break;
         case '/kontenku':
-            $creations = getUserCreations($user['id']);
+            $creations = User::getUserCreations($user['id']);
             if (empty($creations)) {
                 $responseText = "Anda belum membuat konten berbayar.";
             } else {
@@ -286,10 +297,10 @@ function handleCommand($chat_id, $command, $user)
                     [['text' => '🔘 Tarik Saldo', 'callback_data' => 'penghasilan:withdraw']]
                 ]
             ];
-            sendMessage($chat_id, $responseText, $keyboard);
+            TelegramAPI::sendMessage($chat_id, $responseText, $keyboard);
             return;
         case '/topkreator':
-            $top_creators = getTopCreators();
+            $top_creators = User::getTopCreators();
             if (empty($top_creators)) {
                 $responseText = "Belum ada kreator.";
             } else {
@@ -300,7 +311,7 @@ function handleCommand($chat_id, $command, $user)
             }
             break;
         case '/riwayatbeli':
-            $purchases = getPurchaseHistory($user['id']);
+            $purchases = User::getPurchaseHistory($user['id']);
             if (empty($purchases)) {
                 $responseText = "Anda belum pernah melakukan pembelian.";
             } else {
@@ -318,12 +329,12 @@ function handleCommand($chat_id, $command, $user)
                 $responseText = "Format perintah salah. Gunakan: /analitik <id_konten>";
             } else {
                 $content_id = (int)$parts[1];
-                $content = getPaidContentById($content_id);
+                $content = Database::getPaidContentById($content_id);
 
                 if (!$content || $content['user_id'] !== $user['id']) {
                     $responseText = "Konten tidak ditemukan atau Anda bukan pemiliknya.";
                 } else {
-                    $analytics = getContentAnalytics($content_id);
+                    $analytics = Database::getContentAnalytics($content_id);
                     $conversion_rate = $analytics['total_views'] > 0 ? ($analytics['total_purchases'] / $analytics['total_views']) * 100 : 0;
 
                     $responseText = "📊 Analitik untuk Konten ID: " . $content_id . "\n\n";
@@ -338,7 +349,7 @@ function handleCommand($chat_id, $command, $user)
             if ($user['role'] !== 'admin' && $user['role'] !== 'editor' && $user['role'] !== 'superadmin') {
                 $responseText = "Anda tidak memiliki izin untuk mengakses perintah ini.";
             } else {
-                $pending_contents = getPendingContents();
+                $pending_contents = Database::getPendingContents();
                 if (empty($pending_contents)) {
                     $responseText = "Tidak ada konten yang menunggu persetujuan.";
                 } else {
@@ -359,7 +370,7 @@ function handleCommand($chat_id, $command, $user)
                         $caption .= "Tipe: " . $content['type'] . "\n";
                         $caption .= "Harga: Rp" . number_format($content['price'], 2, ',', '.') . "\n";
                         $caption .= "Deskripsi: " . $content['caption'] . "\n";
-                        sendMediaToEditor($content, $caption, $keyboard);
+                        TelegramAPI::sendMediaToEditor($content, $caption, $keyboard);
                     }
                     return;
                 }
@@ -369,31 +380,19 @@ function handleCommand($chat_id, $command, $user)
             $responseText = "Perintah tidak dikenali.";
             break;
     }
-    sendMessage($chat_id, $responseText);
+    TelegramAPI::sendMessage($chat_id, $responseText);
 }
 
 function handleLoginCommand($chat_id, $user)
 {
-    $token = createLoginToken($user['id']);
+    $token = User::createLoginToken($user['id']);
     if ($token) {
         $loginLink = "http://{$_SERVER['HTTP_HOST']}/auth/callback.php?token={$token}";
         $responseText = "Klik link ini untuk login: {$loginLink}";
     } else {
         $responseText = "Gagal membuat link login. Coba lagi nanti.";
     }
-    sendMessage($chat_id, $responseText);
-}
-
-function createLoginToken($user_id)
-{
-    $token = bin2hex(random_bytes(32));
-    $db = getDbConnection();
-    $stmt = $db->prepare("UPDATE users SET login_token = ? WHERE id = ?");
-    $stmt->bind_param('si', $token, $user_id);
-    if ($stmt->execute()) {
-        return $token;
-    }
-    return null;
+    TelegramAPI::sendMessage($chat_id, $responseText);
 }
 
 function handleMedia($message, $user, $media_type)
@@ -403,7 +402,7 @@ function handleMedia($message, $user, $media_type)
     $file_id = getFileIdFromMessage($message, $media_type);
 
     // Save message to database with 'pending' status
-    $db_message_id = saveMessageToDb($user['id'], $message_id, $media_type, $file_id, $caption);
+    $db_message_id = Database::saveMessageToDb($user['id'], $message_id, $media_type, $file_id, $caption);
 
     if ($db_message_id) {
         // Send confirmation to user
@@ -416,9 +415,9 @@ function handleMedia($message, $user, $media_type)
             ]
         ];
         $text = "📩 Media kamu telah kami terima!\n\nKlik tombol di bawah ini:\n✅ Upload → Untuk melanjutkan ke admin\n❌ Hapus → Untuk membatalkan\n⏳ Jika tidak dikonfirmasi dalam 5 menit, akan dihapus otomatis.";
-        sendMessage($user['telegram_id'], $text, $keyboard);
+        TelegramAPI::sendMessage($user['telegram_id'], $text, $keyboard);
     } else {
-        sendMessage($user['telegram_id'], 'Terjadi kesalahan saat menyimpan media Anda. Silakan coba lagi.');
+        TelegramAPI::sendMessage($user['telegram_id'], 'Terjadi kesalahan saat menyimpan media Anda. Silakan coba lagi.');
     }
 }
 
@@ -441,8 +440,8 @@ function handleState($user, $message)
                 $blurred_file_id = null;
 
                 if ($media_type === 'photo') {
-                    sendMessage($chat_id, "Memproses gambar blur...");
-                    $blurred_file_id = blurAndReuploadImage($file_id);
+                    TelegramAPI::sendMessage($chat_id, "Memproses gambar blur...");
+                    $blurred_file_id = TelegramAPI::blurAndReuploadImage($file_id);
                 }
 
                 // Store temporary data
@@ -453,10 +452,10 @@ function handleState($user, $message)
                     'caption' => $caption
                 ];
 
-                updateUserState($user_id, 'create_content_price');
-                sendMessage($chat_id, "Media diterima. Sekarang, silakan masukkan harga untuk konten ini (misalnya: 5000).");
+                User::updateUserState($user_id, 'create_content_price');
+                TelegramAPI::sendMessage($chat_id, "Media diterima. Sekarang, silakan masukkan harga untuk konten ini (misalnya: 5000).");
             } else {
-                sendMessage($chat_id, "Tolong kirimkan media (foto, video, atau dokumen).");
+                TelegramAPI::sendMessage($chat_id, "Tolong kirimkan media (foto, video, atau dokumen).");
             }
             break;
 
@@ -468,23 +467,23 @@ function handleState($user, $message)
                     $content_data['price'] = $price;
 
                     // Save to database
-                    $content_id = createPaidContent($user_id, $content_data);
+                    $content_id = Database::createPaidContent($user_id, $content_data);
 
                     if ($content_id) {
-                        sendMessage($chat_id, "Konten berbayar Anda telah berhasil dibuat dengan ID: $content_id");
+                        TelegramAPI::sendMessage($chat_id, "Konten berbayar Anda telah berhasil dibuat dengan ID: $content_id");
                         unset($temp_content_data[$user_id]);
-                        updateUserState($user_id, null); // Clear state
+                        User::updateUserState($user_id, null); // Clear state
                     } else {
-                        sendMessage($chat_id, "Terjadi kesalahan saat menyimpan konten Anda. Silakan coba lagi.");
+                        TelegramAPI::sendMessage($chat_id, "Terjadi kesalahan saat menyimpan konten Anda. Silakan coba lagi.");
                         // Optionally clear state or let them try again
                     }
 
                 } else {
-                    sendMessage($chat_id, "Terjadi kesalahan. Silakan mulai lagi dengan /buatkonten.");
-                    updateUserState($user_id, null);
+                    TelegramAPI::sendMessage($chat_id, "Terjadi kesalahan. Silakan mulai lagi dengan /buatkonten.");
+                    User::updateUserState($user_id, null);
                 }
             } else {
-                sendMessage($chat_id, "Harga tidak valid. Harap masukkan angka positif.");
+                TelegramAPI::sendMessage($chat_id, "Harga tidak valid. Harap masukkan angka positif.");
             }
             break;
     }
@@ -496,20 +495,20 @@ function sendPaidContent($chat_id, $content, $purchase_id)
     $result = null;
     switch ($content['type']) {
         case 'photo':
-            $result = sendPhoto($chat_id, $content['file_id'], $content['caption']);
+            $result = TelegramAPI::sendPhoto($chat_id, $content['file_id'], $content['caption']);
             break;
         case 'video':
-            $result = sendVideo($chat_id, $content['file_id'], $content['caption']);
+            $result = TelegramAPI::sendVideo($chat_id, $content['file_id'], $content['caption']);
             break;
         case 'document':
-            $result = sendDocument($chat_id, $content['file_id'], $content['caption']);
+            $result = TelegramAPI::sendDocument($chat_id, $content['file_id'], $content['caption']);
             break;
     }
 
     if (!$result || !$result['ok']) {
         // Log the error
         $error_message = $result['description'] ?? 'Unknown error';
-        logError($content['user_id'], $purchase_id, $error_message);
+        Database::logError($content['user_id'], $purchase_id, $error_message);
     }
 }
 
