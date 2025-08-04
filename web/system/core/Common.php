@@ -375,7 +375,7 @@ if ( ! function_exists('is_cli'))
 	 *
 	 * Test to see if a request was made from the command line.
 	 *
-	 * @return	bool
+	 * @return 	bool
 	 */
 	function is_cli()
 	{

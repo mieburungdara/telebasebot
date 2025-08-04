@@ -64,63 +64,63 @@ class CI_Loader {
 	 *
 	 * @var	array
 	 */
-	protected $_ci_view_paths		=	array(VIEWPATH	=> TRUE);
+	protected $_ci_view_paths =	array(VIEWPATH	=> TRUE);
 
 	/**
 	 * List of paths to load libraries from
 	 *
 	 * @var	array
 	 */
-	protected $_ci_library_paths	=	array(APPPATH, BASEPATH);
+	protected $_ci_library_paths =	array(APPPATH, BASEPATH);
 
 	/**
 	 * List of paths to load models from
 	 *
 	 * @var	array
 	 */
-	protected $_ci_model_paths		=	array(APPPATH);
+	protected $_ci_model_paths =	array(APPPATH);
 
 	/**
 	 * List of paths to load helpers from
 	 *
 	 * @var	array
 	 */
-	protected $_ci_helper_paths		=	array(APPPATH, BASEPATH);
+	protected $_ci_helper_paths =	array(APPPATH, BASEPATH);
 
 	/**
 	 * List of cached variables
 	 *
 	 * @var	array
 	 */
-	protected $_ci_cached_vars		=	array();
+	protected $_ci_cached_vars =	array();
 
 	/**
 	 * List of loaded classes
 	 *
 	 * @var	array
 	 */
-	protected $_ci_classes			=	array();
+	protected $_ci_classes =	array();
 
 	/**
 	 * List of loaded models
 	 *
 	 * @var	array
 	 */
-	protected $_ci_models			=	array();
+	protected $_ci_models =	array();
 
 	/**
 	 * List of loaded helpers
 	 *
 	 * @var	array
 	 */
-	protected $_ci_helpers			=	array();
+	protected $_ci_helpers =	array();
 
 	/**
 	 * List of class name mappings
 	 *
 	 * @var	array
 	 */
-	protected $_ci_varmap			=	array(
+	protected $_ci_varmap =	array(
 		'unit_test' => 'unit',
 		'user_agent' => 'agent'
 	);
@@ -167,8 +167,8 @@ class CI_Loader {
 	 *
 	 * @used-by	Mainly used by Form Helper function _get_validation_object().
 	 *
-	 * @param	string		$class	Class name to check for
-	 * @return	string|bool	Class object name if loaded or FALSE
+	 * @param 	string		$class	Class name to check for
+	 * @return 	string|bool	Class object name if loaded or FALSE
 	 */
 	public function is_loaded($class)
 	{
@@ -355,8 +355,9 @@ class CI_Loader {
 		}
 
 		$this->_ci_models[] = $name;
-		$CI->$name = new $model();
-		log_message('info', 'Model "'.get_class($CI->$name).'" initialized');
+		$model = new $model();
+		$CI->$name = $model;
+		log_message('info', 'Model "'.get_class($model).'" initialized');
 		return $this;
 	}
 
@@ -520,7 +521,7 @@ class CI_Loader {
 	 * @param	array|object|string	$vars
 	 *					An associative array or object containing values
 	 *					to be set, or a value's name if string
-	 * @param	string	$val	Value to set, only used if $vars is a string
+	 * @param 	string	$val	Value to set, only used if $vars is a string
 	 * @return	object
 	 */
 	public function vars($vars, $val = '')
@@ -679,7 +680,7 @@ class CI_Loader {
 	 * Loads language files.
 	 *
 	 * @param	string|string[]	$files	List of language file names to load
-	 * @param	string		$lang	Language name
+	 * @param	string		Language name
 	 * @return	object
 	 */
 	public function language($files, $lang = '')
@@ -769,11 +770,11 @@ class CI_Loader {
 	 *
 	 * @see	CI_Loader::$_ci_library_paths
 	 * @see	CI_Loader::$_ci_model_paths
-	 * @see	CI_Loader::$_ci_helper_paths
-	 * @see	CI_Config::$_config_paths
+	 * @see CI_Loader::$_ci_helper_paths
+	 * @see CI_Config::$_config_paths
 	 *
 	 * @param	string	$path		Path to add
-	 * @param	bool	$view_cascade	(default: TRUE)
+	 * @param 	bool	$view_cascade	(default: TRUE)
 	 * @return	object
 	 */
 	public function add_package_path($path, $view_cascade = TRUE)
@@ -1008,9 +1009,9 @@ class CI_Loader {
 	 * @used-by	CI_Loader::library()
 	 * @uses	CI_Loader::_ci_init_library()
 	 *
-	 * @param	string		$class		Class name to load
-	 * @param	mixed		$params		Optional parameters to pass to the class constructor
-	 * @param	string		$object_name	Optional object name to assign to
+	 * @param	string	$class		Class name to load
+	 * @param	mixed	$params		Optional parameters to pass to the class constructor
+	 * @param	string	$object_name	Optional object name to assign to
 	 * @return	void
 	 */
 	protected function _ci_load_library($class, $params = NULL, $object_name = NULL)
@@ -1404,7 +1405,7 @@ class CI_Loader {
 	 *
 	 * Get a reference to a specific library or model.
 	 *
-	 * @param	string	$component	Component name
+	 * @param 	string	$component	Component name
 	 * @return	bool
 	 */
 	protected function &_ci_get_component($component)
